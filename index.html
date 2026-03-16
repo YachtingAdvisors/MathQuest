@@ -1,0 +1,224 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no, viewport-fit=cover">
+  <meta name="description" content="MathQuest: Realm of Numbers - A Pokemon-style math RPG adventure for kids!">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="black-translucent">
+  <meta name="theme-color" content="#1a1a2e">
+  <title>MathQuest: Realm of Numbers</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+
+  <!-- Rotate Device Message (phones in portrait) -->
+  <div id="rotate-message">
+    <div class="rotate-icon">&#x1F4F1;</div>
+    <p class="pixel-text">Please rotate your device!</p>
+    <p class="pixel-text small">MathQuest plays best in landscape mode.</p>
+  </div>
+
+  <div id="game-container">
+    <canvas id="game-canvas" width="320" height="240"></canvas>
+
+    <!-- Title Screen Overlay -->
+    <div id="title-screen" class="overlay">
+      <div class="title-stars"></div>
+      <div class="title-content">
+        <div class="title-logo">MathQuest</div>
+        <div class="title-subtitle">Realm of Numbers</div>
+        <div class="title-version">v1.0</div>
+        <div class="title-menu">
+          <button class="pixel-btn" id="btn-new-game">New Game</button>
+          <button class="pixel-btn" id="btn-continue">Continue</button>
+        </div>
+        <div class="title-footer pixel-text small">&copy; 2026 MathQuest</div>
+      </div>
+    </div>
+
+    <!-- Dialogue Box -->
+    <div id="dialogue-box" class="overlay" hidden>
+      <div class="dialogue-frame">
+        <div class="dialogue-speaker"></div>
+        <div class="dialogue-text"></div>
+        <div class="dialogue-continue">&#9660;</div>
+      </div>
+    </div>
+
+    <!-- Starter Selection -->
+    <div id="starter-select" class="overlay" hidden>
+      <h2 class="pixel-text starter-heading">Choose your partner!</h2>
+      <div class="starter-options">
+        <div class="starter-card" data-creature="flametail">
+          <div class="starter-sprite" id="sprite-flametail"></div>
+          <div class="starter-name">Flametail</div>
+          <div class="starter-type fire">Fire</div>
+          <div class="starter-desc">A fierce fox with a blazing tail!</div>
+        </div>
+        <div class="starter-card" data-creature="aquapup">
+          <div class="starter-sprite" id="sprite-aquapup"></div>
+          <div class="starter-name">Aquapup</div>
+          <div class="starter-type water">Water</div>
+          <div class="starter-desc">A playful otter that loves to splash!</div>
+        </div>
+        <div class="starter-card" data-creature="leafbara">
+          <div class="starter-sprite" id="sprite-leafbara"></div>
+          <div class="starter-name">Leafbara</div>
+          <div class="starter-type grass">Grass</div>
+          <div class="starter-desc">A calm capybara with a swirling leaf tornado!</div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Pause/Game Menu -->
+    <div id="game-menu" class="overlay" hidden>
+      <div class="menu-backdrop"></div>
+      <div class="menu-panel">
+        <h2 class="pixel-text">Menu</h2>
+        <button class="pixel-btn menu-btn" id="btn-team">Team</button>
+        <button class="pixel-btn menu-btn" id="btn-bag">Bag</button>
+        <button class="pixel-btn menu-btn" id="btn-stats">Math Stats</button>
+        <button class="pixel-btn menu-btn" id="btn-save">Save</button>
+        <button class="pixel-btn menu-btn" id="btn-resume">Resume</button>
+      </div>
+    </div>
+
+    <!-- Team View -->
+    <div id="team-view" class="overlay" hidden>
+      <div class="team-panel">
+        <h2 class="pixel-text">Your Team</h2>
+        <div id="team-list"></div>
+        <button class="pixel-btn" id="btn-team-back">Back</button>
+      </div>
+    </div>
+
+    <!-- Bag/Inventory View -->
+    <div id="bag-view" class="overlay" hidden>
+      <div class="bag-panel">
+        <h2 class="pixel-text">Bag</h2>
+        <div id="bag-list"></div>
+        <div class="gold-display">
+          <span class="gold-icon">&#9733;</span>
+          Gold: <span id="gold-amount">0</span>
+        </div>
+        <button class="pixel-btn" id="btn-bag-back">Back</button>
+      </div>
+    </div>
+
+    <!-- Math Stats View -->
+    <div id="stats-view" class="overlay" hidden>
+      <div class="stats-panel">
+        <h2 class="pixel-text">Math Stats</h2>
+        <div id="stats-content"></div>
+        <button class="pixel-btn" id="btn-stats-back">Back</button>
+      </div>
+    </div>
+
+    <!-- Overworld HUD (area name + gold, shown during exploration) -->
+    <div id="overworld-hud" hidden>
+      <div id="hud-area-name" class="hud-area"></div>
+      <div class="hud-gold">&#9733; <span id="hud-gold">0</span>g</div>
+    </div>
+
+    <!-- Shop View -->
+    <div id="shop-view" class="overlay" hidden>
+      <div class="shop-panel">
+        <h2 class="pixel-text" id="shop-title">Shop</h2>
+        <div class="shop-gold">
+          <span class="gold-icon">&#9733;</span> Gold: <span id="shop-gold-amount">0</span>
+        </div>
+        <div id="shop-item-list"></div>
+        <button class="pixel-btn" id="btn-shop-close">Leave Shop</button>
+      </div>
+    </div>
+
+    <!-- Creature Picker (for using items outside battle) -->
+    <div id="creature-picker" class="overlay" hidden>
+      <div class="creature-picker-panel">
+        <h2 class="pixel-text" id="creature-picker-title">Use on which creature?</h2>
+        <div id="creature-picker-list"></div>
+        <button class="pixel-btn" id="btn-picker-cancel">Cancel</button>
+      </div>
+    </div>
+
+    <!-- Battle HUD (positioned over canvas, controlled by JS) -->
+    <div id="battle-hud" hidden>
+      <!-- Player Side -->
+      <div class="battle-info player-info">
+        <div class="battle-name" id="player-creature-name"></div>
+        <div class="battle-level" id="player-creature-level"></div>
+        <div class="hp-bar-container">
+          <div class="hp-label">HP</div>
+          <div class="hp-bar">
+            <div class="hp-fill" id="player-hp-fill"></div>
+          </div>
+          <div class="hp-text" id="player-hp-text"></div>
+        </div>
+        <div class="xp-bar-container">
+          <div class="xp-bar">
+            <div class="xp-fill" id="player-xp-fill"></div>
+          </div>
+        </div>
+      </div>
+      <!-- Enemy Side -->
+      <div class="battle-info enemy-info">
+        <div class="battle-name" id="enemy-creature-name"></div>
+        <div class="battle-level" id="enemy-creature-level"></div>
+        <div class="hp-bar-container">
+          <div class="hp-label">HP</div>
+          <div class="hp-bar">
+            <div class="hp-fill" id="enemy-hp-fill"></div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Math Problem Overlay (shown during battle) -->
+    <div id="math-problem" class="overlay" hidden>
+      <div class="math-frame">
+        <div class="math-timer-bar">
+          <div class="math-timer-fill" id="math-timer-fill"></div>
+        </div>
+        <div class="math-question" id="math-question-text"></div>
+        <div class="math-answers" id="math-answers"></div>
+        <div class="math-streak" id="math-streak"></div>
+      </div>
+    </div>
+
+    <!-- Level Up Notification -->
+    <div id="level-up" class="overlay" hidden>
+      <div class="level-up-frame">
+        <div class="level-up-sparkles"></div>
+        <div class="level-up-text">LEVEL UP!</div>
+        <div class="level-up-details" id="level-up-details"></div>
+        <button class="pixel-btn" id="btn-level-ok">OK!</button>
+      </div>
+    </div>
+
+    <!-- Loading Screen -->
+    <div id="loading-screen" class="overlay">
+      <div class="loading-content">
+        <div class="loading-logo">MathQuest</div>
+        <div class="loading-text">Loading<span class="loading-dots"></span></div>
+        <div class="loading-bar">
+          <div class="loading-fill" id="loading-fill"></div>
+        </div>
+        <div class="loading-tip pixel-text small" id="loading-tip">Tip: Answering quickly gives bonus damage!</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Game Scripts (loaded in dependency order) -->
+  <script src="math-engine.js?v=8"></script>
+  <script src="sprites.js?v=8"></script>
+  <script src="spritesheet-data.js?v=8"></script>
+  <script src="game-data.js?v=8"></script>
+  <script src="audio.js?v=8"></script>
+  <script src="game-state.js?v=8"></script>
+  <script src="overworld.js?v=8"></script>
+  <script src="battle.js?v=8"></script>
+  <script src="main.js?v=8"></script>
+
+</body>
+</html>
