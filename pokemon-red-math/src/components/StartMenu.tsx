@@ -29,6 +29,7 @@ import {
   showMathLab as setShowMathLab,
   showMathBadges as setShowMathBadges,
 } from "../state/mathSlice";
+import { saveSettings } from "../state/settingsSlice";
 
 const StartMenu = () => {
   const dispatch = useDispatch();
@@ -133,6 +134,7 @@ const StartMenu = () => {
                   postMessage: `${name} saved the game!`,
                   confirm: () => {
                     dispatch(save());
+                    dispatch(saveSettings());
                   },
                 })
               );

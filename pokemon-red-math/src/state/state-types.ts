@@ -57,4 +57,5 @@ export interface GameState {
   completedQuests: string[];
   mathGrade?: number;
   mathEngineState?: any;
+  rivalName?: string;
 }

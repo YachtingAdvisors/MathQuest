@@ -23,6 +23,8 @@ interface MathSliceState {
   showDailyChallenge: boolean;
   showMathLab: boolean;
   showMathBadges: boolean;
+  rareCounter: number; // 0-30, resets when rare pokemon appears
+  rareEncounterReady: boolean; // true when counter hits 30
 }
 
 const initialState: MathSliceState = {
@@ -46,6 +48,8 @@ const initialState: MathSliceState = {
   showDailyChallenge: false,
   showMathLab: false,
   showMathBadges: false,
+  rareCounter: 0,
+  rareEncounterReady: false,
 };
 
 export const mathSlice = createSlice({
@@ -139,6 +143,16 @@ export const mathSlice = createSlice({
     hideMathBadges: (state) => {
       state.showMathBadges = false;
     },
+    incrementRareCounter: (state) => {
+      state.rareCounter = Math.min(30, state.rareCounter + 1);
+      if (state.rareCounter >= 30) {
+        state.rareEncounterReady = true;
+      }
+    },
+    resetRareCounter: (state) => {
+      state.rareCounter = 0;
+      state.rareEncounterReady = false;
+    },
     resetMathState: () => initialState,
   },
 });
@@ -166,6 +180,8 @@ export const {
   hideMathLab,
   showMathBadges,
   hideMathBadges,
+  incrementRareCounter,
+  resetRareCounter,
   resetMathState,
 } = mathSlice.actions;
 
@@ -208,5 +224,10 @@ export const selectShowMathLab = (state: RootState) =>
   state.math.showMathLab;
 export const selectShowMathBadges = (state: RootState) =>
   state.math.showMathBadges;
+
+export const selectRareCounter = (state: RootState) =>
+  state.math.rareCounter;
+export const selectRareEncounterReady = (state: RootState) =>
+  state.math.rareEncounterReady;
 
 export default mathSlice.reducer;

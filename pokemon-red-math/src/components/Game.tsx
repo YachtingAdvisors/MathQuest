@@ -33,8 +33,9 @@ import LearnMove from "../app/LearnMove";
 import QuestHandler from "./QuestHandler";
 import ConfirmationMenu from "./ConfirmationMenu";
 import Evolution from "./Evolution";
-import GradeSelect from "./GradeSelect";
 import SpeedControl from "./SpeedControl";
+import IntroSequence from "./IntroSequence";
+import RareCounter from "./RareCounter";
 import MathPokedex from "./MathPokedex";
 import ParentDashboard from "./ParentDashboard";
 import DailyChallenge from "./DailyChallenge";
@@ -163,8 +164,9 @@ const Game = () => {
         close={() => {}}
         masteryData={masteryData}
       />
+      <RareCounter />
       {gradeSelected && <SpeedControl />}
-      <GradeSelect />
+      <IntroSequence />
       <LoadScreen />
       <TitleScreen />
       <GameboyMenu />

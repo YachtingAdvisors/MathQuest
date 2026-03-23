@@ -11,6 +11,8 @@ import {
   showMathChallenge,
   submitMathAnswer,
   dismissMathOverlay,
+  incrementRareCounter,
+  resetRareCounter,
 } from "../state/mathSlice";
 
 export function useMathEngine() {
@@ -63,6 +65,13 @@ export function useMathEngine() {
       dispatch(setEngineState(engine.getState()));
       dispatch(submitMathAnswer(result));
 
+      // Update rare encounter counter
+      if (result.correct) {
+        dispatch(incrementRareCounter());
+      } else {
+        dispatch(resetRareCounter());
+      }
+
       return result;
     },
     [currentProblem, problemStartTime, dispatch, getEngine]
@@ -79,6 +88,7 @@ export function useMathEngine() {
     );
     dispatch(setEngineState(engine.getState()));
     dispatch(submitMathAnswer(result));
+    dispatch(resetRareCounter());
   }, [currentProblem, dispatch, getEngine]);
 
   const handleHint = useCallback((): string => {

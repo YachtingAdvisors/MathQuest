@@ -1,6 +1,7 @@
 import { useEffect } from "react";
 import { useDispatch } from "react-redux";
 import emitter, { Event } from "../app/emitter";
+import { setGameSpeed } from "../state/settingsSlice";
 
 const KeyboardHandler = () => {
   const dispatch = useDispatch();
@@ -32,6 +33,18 @@ const KeyboardHandler = () => {
           break;
         case " ":
           emitter.emit(Event.Start);
+          break;
+        // Number keys 1-9 set game speed
+        case "1":
+        case "2":
+        case "3":
+        case "4":
+        case "5":
+        case "6":
+        case "7":
+        case "8":
+        case "9":
+          dispatch(setGameSpeed(parseInt(e.key, 10)));
           break;
       }
     };

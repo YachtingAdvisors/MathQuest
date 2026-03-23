@@ -1,5 +1,7 @@
 import styled, { keyframes } from "styled-components";
 import { useState } from "react";
+import { useSelector } from "react-redux";
+import { selectGameSpeed } from "../state/settingsSlice";
 
 const fadeIn = keyframes`
   from { opacity: 0; transform: translateY(10px); }
@@ -15,14 +17,14 @@ const Bar = styled.div`
   display: flex;
   align-items: center;
   justify-content: center;
-  gap: 24px;
+  gap: 20px;
   padding: 6px 12px;
   z-index: 9999;
   animation: ${fadeIn} 0.4s ease-out;
   flex-wrap: wrap;
 
   @media (max-width: 600px) {
-    gap: 10px;
+    gap: 8px;
     padding: 5px 6px;
   }
 `;
@@ -81,6 +83,17 @@ const Divider = styled.span`
   }
 `;
 
+const SpeedDisplay = styled.span<{ $fast: boolean }>`
+  color: ${(p) => (p.$fast ? "#f90" : "#aaa")};
+  font-family: "PressStart2P", monospace;
+  font-size: 9px;
+  font-weight: bold;
+
+  @media (max-width: 600px) {
+    font-size: 6px;
+  }
+`;
+
 const CloseBtn = styled.button`
   background: none;
   border: 1px solid #555;
@@ -90,7 +103,7 @@ const CloseBtn = styled.button`
   font-size: 7px;
   padding: 2px 6px;
   cursor: pointer;
-  margin-left: 8px;
+  margin-left: 4px;
 
   &:hover {
     color: #fff;
@@ -100,12 +113,12 @@ const CloseBtn = styled.button`
   @media (max-width: 600px) {
     font-size: 5px;
     padding: 2px 4px;
-    margin-left: 4px;
   }
 `;
 
 const ControlsHint = () => {
   const [visible, setVisible] = useState(true);
+  const speed = useSelector(selectGameSpeed);
 
   if (!visible) return null;
 
@@ -123,14 +136,14 @@ const ControlsHint = () => {
 
       <Group>
         <Key>ENTER</Key>
-        <Label>A / Select</Label>
+        <Label>A</Label>
       </Group>
 
       <Divider>|</Divider>
 
       <Group>
         <Key>SHIFT</Key>
-        <Label>B / Back</Label>
+        <Label>B</Label>
       </Group>
 
       <Divider>|</Divider>
@@ -138,6 +151,16 @@ const ControlsHint = () => {
       <Group>
         <Key>SPACE</Key>
         <Label>Menu</Label>
+      </Group>
+
+      <Divider>|</Divider>
+
+      <Group>
+        <Key>1</Key>
+        <Label>-</Label>
+        <Key>9</Key>
+        <Label>Speed</Label>
+        <SpeedDisplay $fast={speed > 1}>{speed}x</SpeedDisplay>
       </Group>
 
       <CloseBtn onClick={() => setVisible(false)}>X</CloseBtn>

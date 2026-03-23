@@ -9,6 +9,8 @@ import {
   selectLoadMenu,
   selectTitleMenu,
 } from "../state/uiSlice";
+import { selectGrade, setEngineState } from "../state/mathSlice";
+import { loadSettings } from "../state/settingsSlice";
 
 const StyledLoadScreen = styled.div`
   position: absolute;
@@ -46,6 +48,23 @@ const LoadScreen = () => {
     label: "Continue",
     action: () => {
       dispatch(load());
+      // Restore math state from the saved game state
+      try {
+        const savedGame = localStorage.getItem("mathquest-save");
+        if (savedGame) {
+          const parsed = JSON.parse(savedGame);
+          if (parsed.mathGrade !== undefined && parsed.mathGrade >= 0) {
+            dispatch(selectGrade(parsed.mathGrade));
+          }
+          if (parsed.mathEngineState) {
+            dispatch(setEngineState(parsed.mathEngineState));
+          }
+        }
+      } catch {
+        // Ignore errors
+      }
+      // Restore settings
+      dispatch(loadSettings());
       loadComplete();
     },
   };

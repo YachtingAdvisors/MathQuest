@@ -26,7 +26,7 @@ export const settingsSlice = createSlice({
   initialState,
   reducers: {
     setGameSpeed: (state, action: PayloadAction<number>) => {
-      state.gameSpeed = Math.min(5, Math.max(1, action.payload));
+      state.gameSpeed = Math.min(9, Math.max(1, action.payload));
     },
     toggleTimedMode: (state) => {
       state.timedMode = !state.timedMode;

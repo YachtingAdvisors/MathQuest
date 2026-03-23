@@ -33,51 +33,9 @@ const initialState: GameState = {
       amount: 2,
     },
   ],
-  name: "Blue",
-  pokemon: [
-    {
-      id: 1,
-      level: 5,
-      xp: 0,
-      hp: 10,
-      moves: [
-        { id: "tackle", pp: 35 },
-        { id: "growl", pp: 40 },
-      ],
-    },
-    {
-      id: 4,
-      level: 5,
-      xp: 0,
-      hp: 19,
-      moves: [
-        { id: "scratch", pp: 35 },
-        { id: "growl", pp: 40 },
-      ],
-    },
-    {
-      id: 7,
-      level: 5,
-      xp: 0,
-      hp: 19,
-      moves: [
-        { id: "tackle", pp: 35 },
-        { id: "tail-whip", pp: 30 },
-      ],
-    },
-  ],
-  pc: [
-    {
-      id: 1,
-      level: 5,
-      xp: 0,
-      hp: 19,
-      moves: [
-        { id: "tackle", pp: 35 },
-        { id: "growl", pp: 40 },
-      ],
-    },
-  ],
+  name: "",
+  pokemon: [],
+  pc: [],
   activePokemonIndex: 0,
   trainerEncounter: undefined,
   defeatedTrainers: [],
@@ -195,10 +153,10 @@ export const gameSlice = createSlice({
       state.name = action.payload;
     },
     save: (state) => {
-      localStorage.setItem(state.name, JSON.stringify(state));
+      localStorage.setItem("mathquest-save", JSON.stringify(state));
     },
     load: (state) => {
-      const savedGame = localStorage.getItem(state.name);
+      const savedGame = localStorage.getItem("mathquest-save");
       if (!savedGame) return;
       const savedGameState = JSON.parse(savedGame) as GameState;
       state.pos = savedGameState.pos;
@@ -215,11 +173,14 @@ export const gameSlice = createSlice({
       state.defeatedTrainers = savedGameState.defeatedTrainers;
       state.collectedItems = savedGameState.collectedItems;
       state.completedQuests = savedGameState.completedQuests;
-      if ((savedGameState as any).mathGrade !== undefined) {
-        (state as any).mathGrade = (savedGameState as any).mathGrade;
+      if (savedGameState.rivalName) {
+        state.rivalName = savedGameState.rivalName;
       }
-      if ((savedGameState as any).mathEngineState !== undefined) {
-        (state as any).mathEngineState = (savedGameState as any).mathEngineState;
+      if (savedGameState.mathGrade !== undefined) {
+        state.mathGrade = savedGameState.mathGrade;
+      }
+      if (savedGameState.mathEngineState !== undefined) {
+        state.mathEngineState = savedGameState.mathEngineState;
       }
     },
     swapPokemonPositions: (state, action: PayloadAction<number[]>) => {
@@ -346,6 +307,13 @@ export const gameSlice = createSlice({
     completeQuest: (state, action: PayloadAction<string>) => {
       state.completedQuests.push(action.payload);
     },
+    setStarterPokemon: (state, action: PayloadAction<PokemonInstance>) => {
+      state.pokemon = [action.payload];
+      state.activePokemonIndex = 0;
+    },
+    setRivalName: (state, action: PayloadAction<string>) => {
+      state.rivalName = action.payload;
+    },
   },
 });
 
@@ -386,6 +354,8 @@ export const {
   faintToTrainer,
   collectItem,
   completeQuest,
+  setStarterPokemon,
+  setRivalName,
 } = gameSlice.actions;
 
 export const selectPos = (state: RootState) => state.game.pos;
@@ -408,7 +378,7 @@ export const selectPreviousMap = (state: RootState) => {
 
 export const selectName = (state: RootState) => state.game.name;
 
-export const selectHasSave = () => localStorage.getItem("game") !== null;
+export const selectHasSave = () => localStorage.getItem("mathquest-save") !== null;
 
 export const selectPokemon = (state: RootState) => state.game.pokemon;
 

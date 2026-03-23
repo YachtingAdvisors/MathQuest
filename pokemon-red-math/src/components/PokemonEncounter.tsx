@@ -73,6 +73,8 @@ import {
   selectPendingAction,
   selectGradeSelected,
   dismissMathOverlay,
+  selectRareEncounterReady,
+  resetRareCounter,
 } from "../state/mathSlice";
 
 const MOVEMENT_ANIMATION = 1300;
@@ -409,6 +411,8 @@ const PokemonEncounter = () => {
   const pendingAction = useSelector(selectPendingAction);
   const gradeSelected = useSelector(selectGradeSelected);
 
+  const rareEncounterReady = useSelector(selectRareEncounterReady);
+
   // Store speed bonus from last math result for catch calculations
   const lastSpeedBonusRef = useRef(1.0);
 
@@ -497,6 +501,19 @@ const PokemonEncounter = () => {
 
     setTrainerPokemonIndex(0);
     dispatch(endEncounter());
+
+    // Rare encounter trigger: after 30 correct answers in a row
+    if (rareEncounterReady && !isTrainer) {
+      dispatch(resetRareCounter());
+      // Spawn a random rare Pokemon (legendary/rare pool)
+      const rarePokemon = [144, 145, 146, 150, 149, 143, 131, 130, 142, 139, 112, 103, 65, 68, 76]; // Articuno, Zapdos, Moltres, Mewtwo, Dragonite, Snorlax, Lapras, Gyarados, etc.
+      const rareId = rarePokemon[Math.floor(Math.random() * rarePokemon.length)];
+      const rareLevel = Math.min(50, Math.max(20, (active?.level || 10) + 10));
+      setTimeout(() => {
+        dispatch(encounterPokemon(getPokemonEncounter(rareId, rareLevel)));
+      }, 500);
+      return;
+    }
 
     if (isTrainer) {
       if (trainerPokemonIndex === 10) {
