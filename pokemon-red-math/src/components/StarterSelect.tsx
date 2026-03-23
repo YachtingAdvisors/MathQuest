@@ -12,7 +12,7 @@ import {
   encounterPokemon,
   encounterTrainer,
 } from "../state/gameSlice";
-import { selectMenuOpen } from "../state/uiSlice";
+// selectMenuOpen removed — StarterSelect handles its own state
 import { selectGradeSelected } from "../state/mathSlice";
 import { getPokemonMetadata } from "../app/use-pokemon-metadata";
 import { getPokemonStats } from "../app/use-pokemon-stats";
@@ -147,7 +147,6 @@ const StarterSelect = () => {
   const pos = useSelector(selectPos);
   const facing = useSelector(selectDirection);
   const gradeSelected = useSelector(selectGradeSelected);
-  const menuOpen = useSelector(selectMenuOpen);
 
   const [phase, setPhase] = useState(Phase.OAK_INTRO);
   const [selectedStarter, setSelectedStarter] = useState<Starter | null>(null);
@@ -274,7 +273,6 @@ const StarterSelect = () => {
   // --- Keyboard ---
   useEvent(Event.A, () => {
     if (!isActive) return;
-    if (menuOpen && phase === Phase.IDLE) return;
 
     // Oak's initial dialogue
     if (phase === Phase.OAK_INTRO && !hasInteracted) {
