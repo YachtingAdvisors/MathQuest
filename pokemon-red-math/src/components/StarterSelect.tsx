@@ -44,10 +44,13 @@ interface Starter {
   rivalCounterId: number;
 }
 
+// Pokeballs are on the table on the RIGHT side of the lab
+// Table is at row 3, columns 6, 7, 8 (walls in map data)
+// Player stands at row 4 facing up to interact
 const STARTERS: Starter[] = [
-  { id: 1, name: "BULBASAUR", type: "GRASS", tableX: 3, rivalCounterId: 4 },
-  { id: 4, name: "CHARMANDER", type: "FIRE", tableX: 4, rivalCounterId: 7 },
-  { id: 7, name: "SQUIRTLE", type: "WATER", tableX: 5, rivalCounterId: 1 },
+  { id: 1, name: "BULBASAUR", type: "GRASS", tableX: 6, rivalCounterId: 4 },
+  { id: 4, name: "CHARMANDER", type: "FIRE", tableX: 7, rivalCounterId: 7 },
+  { id: 7, name: "SQUIRTLE", type: "WATER", tableX: 8, rivalCounterId: 1 },
 ];
 
 enum Phase {
@@ -187,12 +190,13 @@ const StarterSelect = () => {
     phase !== Phase.DONE;
 
   // Check which Pokeball the player is facing (if any)
+  // Table is at row 3. Player stands at row 4 facing up.
   const getFacingPokeball = (): Starter | null => {
     if (facing !== Direction.Up) return null;
     const mod = directionModifier(facing);
     const targetX = pos.x + mod.x;
     const targetY = pos.y + mod.y;
-    if (targetY !== 1) return null;
+    if (targetY !== 3) return null;
     return STARTERS.find((s) => s.tableX === targetX) || null;
   };
 
