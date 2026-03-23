@@ -1,6 +1,7 @@
 import styled from "styled-components";
 import Gameboy from "./components/Gameboy";
 import Game from "./components/Game";
+import ControlsHint from "./components/ControlsHint";
 
 import "./App.css";
 import Paint from "./components/Paint";
@@ -28,6 +29,7 @@ const App = () => {
         <Game />
         {PAINT_MODE && <Paint />}
       </Gameboy>
+      <ControlsHint />
     </StyledApp>
   );
 };
