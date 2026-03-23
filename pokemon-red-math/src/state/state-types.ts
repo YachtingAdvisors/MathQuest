@@ -29,6 +29,7 @@ export interface PokemonInstance {
   xp: number;
   hp: number;
   moves: MoveState[];
+  shiny?: boolean;
 }
 
 export interface PokemonEncounterType {
@@ -36,6 +37,7 @@ export interface PokemonEncounterType {
   level: number;
   hp: number;
   moves: string[];
+  shiny?: boolean;
 }
 
 export interface GameState {

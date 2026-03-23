@@ -64,6 +64,12 @@ const processMove = (
     };
   }
 
+  // Shiny bonuses: +10% attack, 2x crit chance
+  const ourShinyBonus = (us as any).shiny ? 1.1 : 1.0;
+  const theirShinyBonus = (them as any).shiny ? 1.1 : 1.0;
+  const ourCritRate = (us as any).shiny ? CRITICAL_HIT_PERCENTAGE * 2 : CRITICAL_HIT_PERCENTAGE;
+  const theirCritRate = (them as any).shiny ? CRITICAL_HIT_PERCENTAGE * 2 : CRITICAL_HIT_PERCENTAGE;
+
   // Our attack
   if (isAttacking) {
     // TODO - handle moves with no power
@@ -74,17 +80,18 @@ const processMove = (
       };
     }
 
-    const attack =
+    const attack = (
       moveMetadata.damageClass === "physical"
         ? ourStats.attack
-        : ourStats.specialAttack;
+        : ourStats.specialAttack
+    ) * ourShinyBonus;
     const defense =
       moveMetadata.damageClass === "physical"
         ? theirStats.defense
         : theirStats.specialDefense;
     if (!moveMetadata.power) throw new Error("No power for move");
     const critical =
-      Math.random() < CRITICAL_HIT_PERCENTAGE ? CRITICAL_HIT_MULTIPLIER : 1;
+      Math.random() < ourCritRate ? CRITICAL_HIT_MULTIPLIER : 1;
     const stab = ourMetadata.types.includes(moveMetadata.type) ? 1.5 : 1;
     const typeEffectiveness = getTypeEffectiveness(
       moveMetadata.type,
@@ -123,17 +130,18 @@ const processMove = (
     };
   }
 
-  const attack =
+  const attack = (
     moveMetadata.damageClass === "physical"
       ? theirStats.attack
-      : theirStats.specialAttack;
+      : theirStats.specialAttack
+  ) * theirShinyBonus;
   const defense =
     moveMetadata.damageClass === "physical"
       ? ourStats.defense
       : ourStats.specialDefense;
   if (!moveMetadata.power) throw new Error("No power for move");
   const critical =
-    Math.random() < CRITICAL_HIT_PERCENTAGE ? CRITICAL_HIT_MULTIPLIER : 1;
+    Math.random() < theirCritRate ? CRITICAL_HIT_MULTIPLIER : 1;
   const stab = theirMetadata.types.includes(moveMetadata.type) ? 1.5 : 1;
   const typeEffectiveness = getTypeEffectiveness(
     moveMetadata.type,

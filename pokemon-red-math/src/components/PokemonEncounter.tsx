@@ -909,6 +909,7 @@ const PokemonEncounter = () => {
             pp: getMoveMetadata(move).pp || 0,
           })),
           hp: enemyStats.hp,
+          shiny: enemy.shiny,
         })
       );
       endEncounter_();
@@ -940,7 +941,9 @@ const PokemonEncounter = () => {
     if (stage === 2) {
       if (isTrainer)
         return `${trainer?.npc.name.toUpperCase()} wants to fight!`;
-      return `Wild ${enemyMetadata.name.toUpperCase()} appeared!`;
+      return enemy.shiny
+        ? `A shiny wild ${enemyMetadata.name.toUpperCase()} appeared!`
+        : `Wild ${enemyMetadata.name.toUpperCase()} appeared!`;
     }
     if (stage >= 4 && stage < 10)
       return `Go! ${activeMetadata.name.toUpperCase()}!`;
@@ -980,7 +983,9 @@ const PokemonEncounter = () => {
     if (stage === 43) return `Aww! It appeared to be caught!`;
     if (stage === 44) return `Shoot! It was so close too!`;
     if (stage === 45)
-      return `All right! ${enemyMetadata.name.toUpperCase()} was caught!`;
+      return enemy.shiny
+        ? `All right! Shiny ${enemyMetadata.name.toUpperCase()} was caught!`
+        : `All right! ${enemyMetadata.name.toUpperCase()} was caught!`;
     if (stage === 48 || stage === 49) {
       return `${trainer?.npc.name.toUpperCase()} sent out ${enemyMetadata.name.toUpperCase()}!`;
     }
@@ -1271,7 +1276,7 @@ const PokemonEncounter = () => {
                       : "0",
                 }}
               >
-                <Name>{enemyMetadata.name}</Name>
+                <Name>{enemy.shiny ? "\u2728 " : ""}{enemyMetadata.name}</Name>
                 <Level>{`:L${enemy.level}`}</Level>
                 <HealthBarContainer>
                   <HealthBar
@@ -1285,7 +1290,9 @@ const PokemonEncounter = () => {
               <ImageContainer $flashing={stage === 17}>
                 <AttackRight $attacking={stage === 18}>
                   <ChangeEnemyPokemon $changing={[46].includes(stage)}>
-                    <RightImage src={rightImage()} />
+                    <div style={enemy.shiny && stage >= 10 && stage <= 33 ? { filter: "hue-rotate(90deg) saturate(1.4) brightness(1.1)" } : undefined}>
+                      <RightImage src={rightImage()} />
+                    </div>
                   </ChangeEnemyPokemon>
                 </AttackRight>
               </ImageContainer>
