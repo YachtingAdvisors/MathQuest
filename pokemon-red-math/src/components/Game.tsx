@@ -34,6 +34,14 @@ import QuestHandler from "./QuestHandler";
 import ConfirmationMenu from "./ConfirmationMenu";
 import Evolution from "./Evolution";
 import GradeSelect from "./GradeSelect";
+import SpeedControl from "./SpeedControl";
+import MathPokedex from "./MathPokedex";
+import ParentDashboard from "./ParentDashboard";
+import DailyChallenge from "./DailyChallenge";
+import MathLab from "./MathLab";
+import MathBadges from "./MathBadges";
+import { useSelector as useSelectorTyped } from "react-redux";
+import { RootState } from "../state/store";
 
 const Container = styled.div`
   position: absolute;
@@ -88,6 +96,10 @@ const ColorOverlay = styled.div`
 const Game = () => {
   const pos = useSelector(selectPos);
   const map = useSelector(selectMap);
+  const mathState = useSelectorTyped((state: RootState) => state.math);
+  const gradeSelected = mathState?.gradeSelected;
+  const grade = mathState?.grade ?? 3;
+  const masteryData = mathState?.engineState?.masteryByType ?? {};
 
   return (
     <Container>
@@ -126,6 +138,32 @@ const Game = () => {
       <ActionOnPokemon />
       <Evolution />
       <ConfirmationMenu />
+      <MathPokedex
+        show={!!mathState?.showMathPokedex}
+        close={() => {}}
+        masteryData={masteryData}
+      />
+      <ParentDashboard
+        show={!!mathState?.showParentDashboard}
+        close={() => {}}
+        engineState={mathState?.engineState}
+      />
+      <DailyChallenge
+        show={!!mathState?.showDailyChallenge}
+        close={() => {}}
+        grade={grade}
+      />
+      <MathLab
+        show={!!mathState?.showMathLab}
+        close={() => {}}
+        grade={grade}
+      />
+      <MathBadges
+        show={!!mathState?.showMathBadges}
+        close={() => {}}
+        masteryData={masteryData}
+      />
+      {gradeSelected && <SpeedControl />}
       <GradeSelect />
       <LoadScreen />
       <TitleScreen />

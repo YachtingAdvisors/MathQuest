@@ -320,6 +320,56 @@ export function genWordProblem(tier: number): RawProblem {
       answer: a * b,
       op: "multiply" as const,
     },
+    {
+      text: `Nurse Joy healed ${a} Pokemon. Each had ${b} HP restored. How much HP total?`,
+      answer: a * b,
+      op: "multiply" as const,
+    },
+    {
+      text: `Team Rocket stole ${a * b} Pokemon and split them into ${b} equal groups. How many per group?`,
+      answer: a,
+      op: "divide" as const,
+    },
+    {
+      text: `Your Pokedex shows ${a} Pokemon in ${b} different routes. How many Pokemon total?`,
+      answer: a * b,
+      op: "multiply" as const,
+    },
+    {
+      text: `Brock's gym has ${a} trainers. Each has ${b} Rock Pokemon. How many Rock Pokemon total?`,
+      answer: a * b,
+      op: "multiply" as const,
+    },
+    {
+      text: `Misty's pool has ${a * b} Magikarp swimming in ${a} equal lanes. How many per lane?`,
+      answer: b,
+      op: "divide" as const,
+    },
+    {
+      text: `You traded ${a} Rare Candies for ${b} Pokeballs each. How many Pokeballs did you get?`,
+      answer: a * b,
+      op: "multiply" as const,
+    },
+    {
+      text: `The Elite Four each have ${b} Pokemon. How many total for all ${a} of them?`,
+      answer: a * b,
+      op: "multiply" as const,
+    },
+    {
+      text: `A Snorlax eats ${a} berries every hour. After ${b} hours, how many berries?`,
+      answer: a * b,
+      op: "multiply" as const,
+    },
+    {
+      text: `You found ${a * b} TMs in ${b} treasure chests. How many TMs per chest?`,
+      answer: a,
+      op: "divide" as const,
+    },
+    {
+      text: `Ash caught ${a} Pokemon on Monday and ${b} times as many on Tuesday. How many on Tuesday?`,
+      answer: a * b,
+      op: "multiply" as const,
+    },
   ];
   const tmpl = pick(templates);
   const distractors = generateDistractors(
@@ -435,6 +485,28 @@ export function genBasicAlgebra(tier: number): RawProblem {
       hint2: `x = ${b} \u00f7 ${a} = ${answer}`,
     };
   }
+}
+
+// ---------------------------------------------------------------------------
+// Visual aid helper
+// ---------------------------------------------------------------------------
+
+export function getVisualAid(type: string, a: number, b: number): string {
+  if (type === 'multiplication' && a <= 5 && b <= 5) {
+    // Return array dots visualization
+    let grid = '';
+    for (let i = 0; i < a; i++) {
+      grid += '* '.repeat(b).trim() + '\n';
+    }
+    return grid.trim();
+  }
+  if (type === 'addition' && a <= 10 && b <= 10) {
+    return '|'.repeat(a) + ' + ' + '|'.repeat(b) + ' = ?';
+  }
+  if (type === 'skipCounting') {
+    return `+${a} each time`;
+  }
+  return '';
 }
 
 // ---------------------------------------------------------------------------

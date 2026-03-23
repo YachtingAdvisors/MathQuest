@@ -18,6 +18,7 @@ export interface MathResult {
   timeMs: number;
   speedBonus: number;
   speedLabel: string;
+  damageMultiplier: number;
 }
 
 export interface MathEngineState {
@@ -29,6 +30,12 @@ export interface MathEngineState {
   totalAnswered: number;
   history: Record<number, Array<{ correct: boolean; timeMs: number }>>;
   masteryByType: Record<string, { correct: number; total: number }>;
+  streakShield: boolean;
+  dailyChallengeScore: number;
+  dailyChallengeDate: string;
+  mathPokedex: Record<string, { mastered: boolean; accuracy: number; totalSolved: number }>;
+  timedMode: boolean;
+  evolutionMastery: Record<number, { requiredType: string; requiredAccuracy: number }>;
 }
 
 export type MathContext =
@@ -62,6 +69,42 @@ export interface GradeConfig {
   minTier: number;
   maxTier: number;
   problemTypes: ProblemType[];
+}
+
+export interface MathTypeAdvantage {
+  pokemonType: string;
+  mathTypes: ProblemType[];
+  bonusMultiplier: number;
+}
+
+export interface DailyChallengeResult {
+  date: string;
+  score: number;
+  totalProblems: number;
+  accuracy: number;
+  bestStreak: number;
+  timeMs: number;
+}
+
+export interface MathBadge {
+  id: string;
+  name: string;
+  description: string;
+  requiredType: ProblemType;
+  requiredAccuracy: number;
+  requiredSolved: number;
+  earned: boolean;
+}
+
+export interface BossMathChallenge {
+  problems: number; // number of consecutive problems to solve
+  context: MathContext;
+  bonusDamageOnPerfect: number; // multiplier for getting all right
+}
+
+export interface VisualAid {
+  type: 'array' | 'numberLine' | 'fractionBar' | 'none';
+  data: any;
 }
 
 export type PendingBattleAction =

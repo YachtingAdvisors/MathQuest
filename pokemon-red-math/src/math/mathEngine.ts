@@ -17,6 +17,8 @@ import {
   FAST_ANSWER_MS,
   BASE_XP,
   HINT_XP_PENALTY,
+  DAMAGE_SPEED_SCALING,
+  MATH_BADGES,
 } from "./gradeConfig";
 import { GENERATORS } from "./problemGenerators";
 
@@ -69,6 +71,12 @@ export class MathEngine {
         totalAnswered: 0,
         history: {},
         masteryByType: {},
+        streakShield: false,
+        dailyChallengeScore: 0,
+        dailyChallengeDate: '',
+        mathPokedex: {},
+        timedMode: true,
+        evolutionMastery: {},
       };
     }
   }
@@ -134,6 +142,7 @@ export class MathEngine {
         timeMs: 0,
         speedBonus: 1.0,
         speedLabel: "",
+        damageMultiplier: 1.0,
       };
     }
 
@@ -161,6 +170,15 @@ export class MathEngine {
       }
     }
 
+    // Calculate damage multiplier from speed
+    let damageMultiplier = 1.0;
+    for (const ds of DAMAGE_SPEED_SCALING) {
+      if (timeMs < ds.maxMs) {
+        damageMultiplier = ds.multiplier;
+        break;
+      }
+    }
+
     if (correct) {
       this.state.totalCorrect += 1;
       this.state.streak += 1;
@@ -169,6 +187,9 @@ export class MathEngine {
       if (this.state.streak > this.state.bestStreak) {
         this.state.bestStreak = this.state.streak;
       }
+
+      // Award streak shield at 10 streak
+      this.awardStreakShield();
 
       const usedHint = this.hintsUsed > 0;
       xpEarned = this.calcXP(this.activeProblem.difficulty, usedHint);
@@ -181,9 +202,16 @@ export class MathEngine {
       }
       if (usedHint) message += " (hint used - half XP)";
       if (speedLabel) message += ` ${speedLabel}`;
+    } else if (!correct && this.state.streakShield) {
+      // Streak shield absorbs the wrong answer
+      this.state.streakShield = false;
+      damageMultiplier = 0.5;
+      message = "Streak Shield activated! Your streak is safe!";
+      message += ` The answer was ${this.activeProblem.answer}.`;
     } else {
       const wasOnStreak = this.state.streak >= 3;
       this.state.streak = 0;
+      damageMultiplier = 0.5;
       speedBonus = 0;
       speedLabel = "";
       message = pick(ENCOURAGEMENT);
@@ -201,7 +229,7 @@ export class MathEngine {
     this.activeProblem = null;
     this.hintsUsed = 0;
 
-    return { correct, streak: this.state.streak, xpEarned, message, timeMs, speedBonus, speedLabel };
+    return { correct, streak: this.state.streak, xpEarned, message, timeMs, speedBonus, speedLabel, damageMultiplier };
   }
 
   // -------------------------------------------------------------------------
@@ -251,6 +279,49 @@ export class MathEngine {
 
   getActiveProblem(): MathProblem | null {
     return this.activeProblem;
+  }
+
+  // -------------------------------------------------------------------------
+  // Streak shield & badges
+  // -------------------------------------------------------------------------
+
+  awardStreakShield(): void {
+    if (this.state.streak >= 10 && !this.state.streakShield) {
+      this.state.streakShield = true;
+    }
+  }
+
+  checkMathBadges(): string[] {
+    const earned: string[] = [];
+    for (const badge of MATH_BADGES) {
+      const mastery = this.state.masteryByType[badge.requiredType];
+      if (!mastery) continue;
+      const accuracy = mastery.total > 0 ? mastery.correct / mastery.total : 0;
+      if (accuracy >= badge.requiredAccuracy && mastery.total >= badge.requiredSolved) {
+        earned.push(badge.id);
+      }
+    }
+    return earned;
+  }
+
+  getMathPokedex(): Record<string, { mastered: boolean; accuracy: number; totalSolved: number }> {
+    const pokedex: Record<string, { mastered: boolean; accuracy: number; totalSolved: number }> = {};
+    for (const [type, data] of Object.entries(this.state.masteryByType)) {
+      const accuracy = data.total > 0 ? data.correct / data.total : 0;
+      pokedex[type] = {
+        mastered: accuracy >= 0.85 && data.total >= 20,
+        accuracy: Math.round(accuracy * 1000) / 1000,
+        totalSolved: data.total,
+      };
+    }
+    return pokedex;
+  }
+
+  checkEvolutionReady(pokemonId: number, requiredType: string, requiredAccuracy: number): boolean {
+    const mastery = this.state.masteryByType[requiredType];
+    if (!mastery || mastery.total === 0) return false;
+    const accuracy = mastery.correct / mastery.total;
+    return accuracy >= requiredAccuracy;
   }
 
   // -------------------------------------------------------------------------

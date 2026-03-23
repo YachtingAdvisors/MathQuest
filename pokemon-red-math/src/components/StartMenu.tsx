@@ -22,6 +22,13 @@ import {
 import PokemonList from "./PokemonList";
 import { DEBUG_MODE } from "../app/constants";
 import { getPokemonStats } from "../app/use-pokemon-stats";
+import {
+  showMathPokedex as setShowMathPokedex,
+  showParentDashboard as setShowParentDashboard,
+  showDailyChallenge as setShowDailyChallenge,
+  showMathLab as setShowMathLab,
+  showMathBadges as setShowMathBadges,
+} from "../state/mathSlice";
 
 const StartMenu = () => {
   const dispatch = useDispatch();
@@ -32,11 +39,64 @@ const StartMenu = () => {
   const allPokemon = useSelector(selectPokemon);
 
   const [pokemon, setPokemon] = useState(false);
+  const [showingMathMenu, setShowingMathMenu] = useState(false);
 
   useEvent(Event.Start, () => {
     dispatch(showStartMenu());
     emitter.emit(Event.StopMoving);
   });
+
+  if (showingMathMenu) {
+    return (
+      <Menu
+        show={show}
+        close={() => setShowingMathMenu(false)}
+        disabled={disabled || saving}
+        menuItems={[
+          {
+            label: "Math Lab",
+            action: () => {
+              dispatch(setShowMathLab());
+              dispatch(hideStartMenu());
+              setShowingMathMenu(false);
+            },
+          },
+          {
+            label: "Pokedex",
+            action: () => {
+              dispatch(setShowMathPokedex());
+              dispatch(hideStartMenu());
+              setShowingMathMenu(false);
+            },
+          },
+          {
+            label: "Badges",
+            action: () => {
+              dispatch(setShowMathBadges());
+              dispatch(hideStartMenu());
+              setShowingMathMenu(false);
+            },
+          },
+          {
+            label: "Challenge",
+            action: () => {
+              dispatch(setShowDailyChallenge());
+              dispatch(hideStartMenu());
+              setShowingMathMenu(false);
+            },
+          },
+          {
+            label: "Stats",
+            action: () => {
+              dispatch(setShowParentDashboard());
+              dispatch(hideStartMenu());
+              setShowingMathMenu(false);
+            },
+          },
+        ]}
+      />
+    );
+  }
 
   return (
     <>
@@ -45,12 +105,8 @@ const StartMenu = () => {
         show={show}
         close={() => dispatch(hideStartMenu())}
         menuItems={[
-          // {
-          //   label: "Pokédex",
-          //   action: () => console.log("TODO"),
-          // },
           {
-            label: "Pokémon",
+            label: "POKeMON",
             action: () => {
               if (allPokemon.length === 0) return;
               setPokemon(true);
@@ -59,6 +115,10 @@ const StartMenu = () => {
           {
             label: "Item",
             action: () => dispatch(showItemsMenu()),
+          },
+          {
+            label: "Math",
+            action: () => setShowingMathMenu(true),
           },
           {
             label: "Player",
@@ -102,10 +162,6 @@ const StartMenu = () => {
                 },
               ]
             : []),
-          // {
-          //   label: "Option",
-          //   action: () => console.log("TODO"),
-          // },
         ]}
       />
       {pokemon && <PokemonList close={() => setPokemon(false)} />}

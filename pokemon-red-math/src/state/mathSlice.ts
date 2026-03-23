@@ -12,6 +12,17 @@ interface MathSliceState {
   showingMathOverlay: boolean;
   showingResult: boolean;
   pendingAction: PendingBattleAction | null;
+  streakShield: boolean;
+  dailyChallengeActive: boolean;
+  dailyChallengeProblems: number;
+  dailyChallengeCorrect: number;
+  dailyChallengeStartTime: number;
+  mathLabActive: boolean;
+  showMathPokedex: boolean;
+  showParentDashboard: boolean;
+  showDailyChallenge: boolean;
+  showMathLab: boolean;
+  showMathBadges: boolean;
 }
 
 const initialState: MathSliceState = {
@@ -24,6 +35,17 @@ const initialState: MathSliceState = {
   showingMathOverlay: false,
   showingResult: false,
   pendingAction: null,
+  streakShield: false,
+  dailyChallengeActive: false,
+  dailyChallengeProblems: 0,
+  dailyChallengeCorrect: 0,
+  dailyChallengeStartTime: 0,
+  mathLabActive: false,
+  showMathPokedex: false,
+  showParentDashboard: false,
+  showDailyChallenge: false,
+  showMathLab: false,
+  showMathBadges: false,
 };
 
 export const mathSlice = createSlice({
@@ -60,6 +82,63 @@ export const mathSlice = createSlice({
       state.showingResult = false;
       state.currentProblem = null;
     },
+    activateStreakShield: (state) => {
+      state.streakShield = true;
+    },
+    consumeStreakShield: (state) => {
+      state.streakShield = false;
+    },
+    startDailyChallenge: (state) => {
+      state.dailyChallengeActive = true;
+      state.dailyChallengeProblems = 0;
+      state.dailyChallengeCorrect = 0;
+      state.dailyChallengeStartTime = Date.now();
+    },
+    endDailyChallenge: (state) => {
+      state.dailyChallengeActive = false;
+    },
+    recordDailyChallengeAnswer: (state, action: PayloadAction<boolean>) => {
+      state.dailyChallengeProblems += 1;
+      if (action.payload) {
+        state.dailyChallengeCorrect += 1;
+      }
+    },
+    startMathLab: (state) => {
+      state.mathLabActive = true;
+    },
+    endMathLab: (state) => {
+      state.mathLabActive = false;
+    },
+    showMathPokedex: (state) => {
+      state.showMathPokedex = true;
+    },
+    hideMathPokedex: (state) => {
+      state.showMathPokedex = false;
+    },
+    showParentDashboard: (state) => {
+      state.showParentDashboard = true;
+    },
+    hideParentDashboard: (state) => {
+      state.showParentDashboard = false;
+    },
+    showDailyChallenge: (state) => {
+      state.showDailyChallenge = true;
+    },
+    hideDailyChallenge: (state) => {
+      state.showDailyChallenge = false;
+    },
+    showMathLab: (state) => {
+      state.showMathLab = true;
+    },
+    hideMathLab: (state) => {
+      state.showMathLab = false;
+    },
+    showMathBadges: (state) => {
+      state.showMathBadges = true;
+    },
+    hideMathBadges: (state) => {
+      state.showMathBadges = false;
+    },
     resetMathState: () => initialState,
   },
 });
@@ -70,6 +149,23 @@ export const {
   showMathChallenge,
   submitMathAnswer,
   dismissMathOverlay,
+  activateStreakShield,
+  consumeStreakShield,
+  startDailyChallenge,
+  endDailyChallenge,
+  recordDailyChallengeAnswer,
+  startMathLab,
+  endMathLab,
+  showMathPokedex,
+  hideMathPokedex,
+  showParentDashboard,
+  hideParentDashboard,
+  showDailyChallenge,
+  hideDailyChallenge,
+  showMathLab,
+  hideMathLab,
+  showMathBadges,
+  hideMathBadges,
   resetMathState,
 } = mathSlice.actions;
 
@@ -90,5 +186,27 @@ export const selectPendingAction = (state: RootState) =>
   state.math.pendingAction;
 export const selectMathEngineState = (state: RootState) =>
   state.math.engineState;
+export const selectStreakShield = (state: RootState) =>
+  state.math.streakShield;
+export const selectDailyChallengeActive = (state: RootState) =>
+  state.math.dailyChallengeActive;
+export const selectDailyChallengeProblems = (state: RootState) =>
+  state.math.dailyChallengeProblems;
+export const selectDailyChallengeCorrect = (state: RootState) =>
+  state.math.dailyChallengeCorrect;
+export const selectDailyChallengeStartTime = (state: RootState) =>
+  state.math.dailyChallengeStartTime;
+export const selectMathLabActive = (state: RootState) =>
+  state.math.mathLabActive;
+export const selectShowMathPokedex = (state: RootState) =>
+  state.math.showMathPokedex;
+export const selectShowParentDashboard = (state: RootState) =>
+  state.math.showParentDashboard;
+export const selectShowDailyChallenge = (state: RootState) =>
+  state.math.showDailyChallenge;
+export const selectShowMathLab = (state: RootState) =>
+  state.math.showMathLab;
+export const selectShowMathBadges = (state: RootState) =>
+  state.math.showMathBadges;
 
 export default mathSlice.reducer;

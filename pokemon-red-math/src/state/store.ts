@@ -2,12 +2,14 @@ import { configureStore, ThunkAction, Action } from "@reduxjs/toolkit";
 import gameReducer from "./gameSlice";
 import uiReducer from "./uiSlice";
 import mathReducer from "./mathSlice";
+import settingsReducer from "./settingsSlice";
 
 export const store = configureStore({
   reducer: {
     game: gameReducer,
     ui: uiReducer,
     math: mathReducer,
+    settings: settingsReducer,
   },
   middleware: (getDefaultMiddleware) =>
     getDefaultMiddleware({

@@ -258,7 +258,12 @@ export const selectMenuOpen = (state: RootState) =>
   state.ui.learningMove !== null ||
   state.ui.confirmationMenu !== null ||
   state.ui.evolution !== null ||
-  state.math?.showingMathOverlay;
+  state.math?.showingMathOverlay ||
+  state.math?.showMathPokedex ||
+  state.math?.showParentDashboard ||
+  state.math?.showDailyChallenge ||
+  state.math?.showMathLab ||
+  state.math?.showMathBadges;
 
 export const selectStartMenuSubOpen = (state: RootState) =>
   state.ui.itemsMenu || state.ui.playerMenu;
