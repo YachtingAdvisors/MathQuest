@@ -6,64 +6,57 @@ import { Event } from "../app/emitter";
 import {
   selectPokemon,
   selectMapId,
-  selectPos,
-  selectDirection,
+  selectName,
   setStarterPokemon,
   encounterPokemon,
   encounterTrainer,
 } from "../state/gameSlice";
-// selectMenuOpen removed — StarterSelect handles its own state
 import { selectGradeSelected } from "../state/mathSlice";
+// uiSlice not needed — StarterSelect manages its own UI
 import { getPokemonMetadata } from "../app/use-pokemon-metadata";
 import { getPokemonStats } from "../app/use-pokemon-stats";
 import { MapId } from "../maps/map-types";
 import { Direction } from "../state/state-types";
-import { directionModifier } from "../app/map-helper";
-import PixelImage from "../styles/PixelImage";
-import Arrow from "./Arrow";
-import Frame from "./Frame";
 import { rival } from "../app/npcs";
 import getPokemonEncounter from "../app/pokemon-encounter-helper";
+import PixelImage from "../styles/PixelImage";
+import Arrow from "./Arrow";
+// Frame not needed — using custom TextBox
+import { RootState } from "../state/store";
 
 // ---------------------------------------------------------------------------
-// In the real Pokemon Red, in Oak's Lab:
-// 1. Player walks up to the table with 3 Pokeballs
-// 2. Pressing A on a Pokeball → Oak: "So! You want <POKEMON>?"
-// 3. Player confirms → receives Pokemon
-// 4. Rival: "I'll take this one then!" (picks type advantage)
-// 5. Rival: "Let's battle!" → trainer battle
+// In Pokemon Red, in Oak's Lab:
+// 1. Oak greets you and tells you to pick from 3 Pokeballs
+// 2. You choose one (full screen overlay with the 3 starters)
+// 3. Rival picks the type-advantaged counter
+// 4. Rival challenges you to a battle
 // ---------------------------------------------------------------------------
 
 interface Starter {
   id: number;
   name: string;
   type: string;
-  // Table positions in the lab (row 1, cols 3, 4, 5)
-  tableX: number;
   rivalCounterId: number;
 }
 
 const STARTERS: Starter[] = [
-  { id: 1, name: "BULBASAUR", type: "GRASS", tableX: 3, rivalCounterId: 4 },
-  { id: 4, name: "CHARMANDER", type: "FIRE", tableX: 4, rivalCounterId: 7 },
-  { id: 7, name: "SQUIRTLE", type: "WATER", tableX: 5, rivalCounterId: 1 },
+  { id: 1, name: "BULBASAUR", type: "GRASS", rivalCounterId: 4 },
+  { id: 4, name: "CHARMANDER", type: "FIRE", rivalCounterId: 7 },
+  { id: 7, name: "SQUIRTLE", type: "WATER", rivalCounterId: 1 },
 ];
 
-// Dialogue phases after player interacts with a Pokeball
 enum Phase {
-  IDLE,               // Waiting for player to interact with table
-  OAK_INTRO,          // "There are 3 POKeMON here!"
-  OAK_CHOOSE,         // "They are inside the POKe BALLS. Choose!"
-  EXAMINING,          // Player walked to a Pokeball
-  OAK_CONFIRM,        // "So! You want <POKEMON>?"
-  OAK_CONFIRM_WAIT,   // Waiting for player to press A to confirm
-  RECEIVED,           // "<PLAYER> received <POKEMON>!"
-  RIVAL_JEALOUS,      // "RIVAL: Hey! I was here first!"
-  OAK_PATIENCE,       // "OAK: Be patient! You can have one too!"
-  RIVAL_PICKS,        // "<RIVAL> picked up <POKEMON>!"
-  RIVAL_CHALLENGE_1,  // "RIVAL: My POKeMON looks stronger!"
-  RIVAL_CHALLENGE_2,  // "RIVAL: Let's check it out!"
-  BATTLE,             // Launches rival battle
+  OAK_GREETING,
+  OAK_CHOOSE,
+  PICK_STARTER,       // Full screen: pick from 3
+  CONFIRM,            // "You want CHARMANDER?" Yes/No
+  RECEIVED,           // "RED received CHARMANDER!"
+  RIVAL_JEALOUS,
+  OAK_PATIENCE,
+  RIVAL_PICKS,
+  RIVAL_CHALLENGE_1,
+  RIVAL_CHALLENGE_2,
+  DONE,
 }
 
 // ---------------------------------------------------------------------------
@@ -75,50 +68,89 @@ const fadeIn = keyframes`
   to { opacity: 1; }
 `;
 
-const DialogueBox = styled.div`
-  position: absolute;
-  bottom: 0; left: 0;
-  width: 100%;
-  height: 20%;
-  z-index: 150;
-  animation: ${fadeIn} 100ms ease-out;
-
-  @media (max-width: 1000px) {
-    height: 30%;
-  }
-`;
-
-const ConfirmOverlay = styled.div`
+const Overlay = styled.div`
   position: absolute;
   top: 0; left: 0;
   width: 100%; height: 100%;
-  z-index: 160;
+  z-index: 300;
   background: var(--bg);
   display: flex;
   flex-direction: column;
-  animation: ${fadeIn} 200ms ease-out;
+  animation: ${fadeIn} 300ms ease-out;
 `;
 
 const TopArea = styled.div`
-  flex: 1; display: flex; flex-direction: column;
-  align-items: center; justify-content: center; padding: 2vh;
+  flex: 1;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  justify-content: center;
+  padding: 2vh;
   @media (max-width: 1000px) { padding: 5px; }
 `;
 
+const TextBox = styled.div`
+  width: 90%;
+  min-height: 18%;
+  background: var(--bg);
+  border: 4px solid black;
+  padding: 2vh;
+  font-family: "PokemonGB";
+  font-size: 3vh;
+  color: black;
+  line-height: 1.8;
+  position: relative;
+  @media (max-width: 1000px) {
+    font-size: 8px; padding: 5px; border: 2px solid black; line-height: 1.6;
+  }
+`;
+
+const bounce = keyframes`
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(3px); }
+`;
+
+const ContinueHint = styled.div`
+  position: absolute;
+  bottom: 4px; right: 8px;
+  font-size: 2.5vh; color: black;
+  animation: ${bounce} 0.8s infinite;
+  @media (max-width: 1000px) { font-size: 7px; }
+`;
+
+const StarterContainer = styled.div`
+  display: flex; justify-content: center; gap: 3vh;
+  width: 100%; padding: 0 2vh;
+  @media (max-width: 1000px) { gap: 8px; padding: 0 4px; }
+`;
+
+const StarterCard = styled.div<{ $active: boolean }>`
+  display: flex; flex-direction: column; align-items: center;
+  padding: 1.5vh;
+  border: 3px solid ${(p) => (p.$active ? "black" : "transparent")};
+  background: ${(p) => (p.$active ? "rgba(0,0,0,0.08)" : "transparent")};
+  flex: 1; max-width: 33%; cursor: pointer;
+  @media (max-width: 1000px) { padding: 3px; border-width: 2px; }
+`;
+
 const StarterImage = styled(PixelImage)`
-  height: 20vh; margin-bottom: 1vh;
-  @media (max-width: 1000px) { height: 45px; margin-bottom: 3px; }
+  height: 15vh; margin-bottom: 0.5vh;
+  @media (max-width: 1000px) { height: 35px; margin-bottom: 2px; }
 `;
 
 const StarterName = styled.div`
-  font-family: "PokemonGB"; font-size: 4vh; color: black; text-align: center;
-  @media (max-width: 1000px) { font-size: 10px; }
+  font-family: "PokemonGB"; font-size: 2.5vh; color: black; text-align: center;
+  @media (max-width: 1000px) { font-size: 7px; }
 `;
 
 const StarterType = styled.div`
-  font-family: "PokemonGB"; font-size: 2.5vh; color: #555; text-align: center;
-  margin-top: 0.5vh;
-  @media (max-width: 1000px) { font-size: 7px; }
+  font-family: "PokemonGB"; font-size: 2vh; color: #555; text-align: center;
+  @media (max-width: 1000px) { font-size: 5px; }
+`;
+
+const ArrowSlot = styled.div`
+  height: 2vh; margin-bottom: 0.5vh;
+  @media (max-width: 1000px) { height: 8px; margin-bottom: 1px; }
 `;
 
 const ConfirmButtons = styled.div`
@@ -144,58 +176,30 @@ const StarterSelect = () => {
   const dispatch = useDispatch();
   const pokemon = useSelector(selectPokemon);
   const mapId = useSelector(selectMapId);
-  const pos = useSelector(selectPos);
-  const facing = useSelector(selectDirection);
   const gradeSelected = useSelector(selectGradeSelected);
+  const playerName = useSelector(selectName) || "PLAYER";
+  const rivalNameStr = useSelector((state: RootState) => (state.game as any).rivalName) || "RIVAL";
 
-  const [phase, setPhase] = useState(Phase.OAK_INTRO);
+  const [phase, setPhase] = useState(Phase.OAK_GREETING);
+  const [starterIndex, setStarterIndex] = useState(1); // Default Charmander
+  const [confirmIndex, setConfirmIndex] = useState(0);
   const [selectedStarter, setSelectedStarter] = useState<Starter | null>(null);
-  const [confirmIndex, setConfirmIndex] = useState(0); // 0=Yes 1=No
-  const [hasInteracted, setHasInteracted] = useState(false);
 
-  // Only active in the lab, before player has pokemon, after grade selected
+  // Active when: in the lab, no pokemon, grade selected
   const isActive =
     mapId === MapId.PalletTownLab &&
     pokemon.length === 0 &&
-    gradeSelected;
-
-  const getRivalName = (): string => {
-    // Read from game state
-    try {
-      const saved = localStorage.getItem("mathquest-save");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.rivalName) return parsed.rivalName;
-      }
-    } catch { /* ignore */ }
-    return "RIVAL";
-  };
-
-  const getPlayerName = (): string => {
-    try {
-      const saved = localStorage.getItem("mathquest-save");
-      if (saved) {
-        const parsed = JSON.parse(saved);
-        if (parsed.name) return parsed.name;
-      }
-    } catch { /* ignore */ }
-    return "PLAYER";
-  };
-
-  const rivalNameStr = getRivalName();
+    gradeSelected &&
+    phase !== Phase.DONE;
 
   const getText = (): string => {
     switch (phase) {
-      case Phase.OAK_INTRO:
-        return "OAK: Ah! There are 3 POKeMON here! Haha!";
+      case Phase.OAK_GREETING:
+        return `OAK: Ah, ${playerName}! I've been waiting for you!`;
       case Phase.OAK_CHOOSE:
-        return "OAK: They are inside the POKe BALLS. When I was young, I was a serious POKeMON trainer! In my old age, I have only 3 left, but you can have one! Go on, choose!";
-      case Phase.EXAMINING:
-        if (!selectedStarter) return "";
-        return `${selectedStarter.name} - ${selectedStarter.type} type POKeMON. Choose this one?`;
+        return "OAK: There are 3 POKeMON here! They're inside the POKe BALLS on that table. When I was young, I was a serious POKeMON trainer! In my old age, I have only 3 left, but you can have one! Go on, choose!";
       case Phase.RECEIVED:
-        if (!selectedStarter) return "";
-        return `${getPlayerName()} received ${selectedStarter.name}!`;
+        return `${playerName} received ${selectedStarter?.name || "POKeMON"}!`;
       case Phase.RIVAL_JEALOUS:
         return `${rivalNameStr}: Hey! I was here first! Gramps, what about me?`;
       case Phase.OAK_PATIENCE:
@@ -214,14 +218,12 @@ const StarterSelect = () => {
     }
   };
 
-  // Give the player their starter
-  const giveStarter = () => {
-    if (!selectedStarter) return;
-    const meta = getPokemonMetadata(selectedStarter.id);
-    const stats = getPokemonStats(selectedStarter.id, 5);
+  const giveStarter = (starter: Starter) => {
+    const meta = getPokemonMetadata(starter.id);
+    const stats = getPokemonStats(starter.id, 5);
     dispatch(
       setStarterPokemon({
-        id: selectedStarter.id,
+        id: starter.id,
         level: 5,
         xp: 0,
         hp: stats.hp,
@@ -233,7 +235,6 @@ const StarterSelect = () => {
     );
   };
 
-  // Launch rival battle
   const startRivalBattle = () => {
     if (!selectedStarter) return;
     const rivalPokemonId = selectedStarter.rivalCounterId;
@@ -242,9 +243,7 @@ const StarterSelect = () => {
         npc: rival,
         pokemon: [{ id: rivalPokemonId, level: 5 }],
         facing: Direction.Left,
-        intro: [
-          `${rivalNameStr}: Let's see how good you really are!`,
-        ],
+        intro: [`${rivalNameStr}: Let's see how good you really are!`],
         outtro: [
           `${rivalNameStr}: What? Unbelievable!`,
           `I picked the wrong POKeMON!`,
@@ -253,127 +252,151 @@ const StarterSelect = () => {
         pos: { x: 6, y: 3 },
       })
     );
-    // The trainer encounter system will handle the battle from here
-    dispatch(
-      encounterPokemon(getPokemonEncounter(rivalPokemonId, 5))
-    );
-  };
-
-  // Check if player is facing a Pokeball on the table
-  const checkPokeball = (): Starter | null => {
-    if (facing !== Direction.Up) return null;
-    const mod = directionModifier(facing);
-    const targetX = pos.x + mod.x;
-    const targetY = pos.y + mod.y;
-    // Table is at row 1, cols 3-5
-    if (targetY !== 1) return null;
-    return STARTERS.find((s) => s.tableX === targetX) || null;
+    dispatch(encounterPokemon(getPokemonEncounter(rivalPokemonId, 5)));
+    setPhase(Phase.DONE);
   };
 
   // --- Keyboard ---
   useEvent(Event.A, () => {
     if (!isActive) return;
 
-    // Oak's initial dialogue
-    if (phase === Phase.OAK_INTRO && !hasInteracted) {
-      setHasInteracted(true);
-      setPhase(Phase.OAK_CHOOSE);
-      return;
-    }
-
-    if (phase === Phase.OAK_CHOOSE) {
-      setPhase(Phase.IDLE);
-      return;
-    }
-
-    // Player is at the table, press A to examine
-    if (phase === Phase.IDLE) {
-      const starter = checkPokeball();
-      if (starter) {
-        setSelectedStarter(starter);
-        setPhase(Phase.EXAMINING);
+    switch (phase) {
+      case Phase.OAK_GREETING:
+        setPhase(Phase.OAK_CHOOSE);
+        break;
+      case Phase.OAK_CHOOSE:
+        setPhase(Phase.PICK_STARTER);
+        break;
+      case Phase.PICK_STARTER:
+        setSelectedStarter(STARTERS[starterIndex]);
         setConfirmIndex(0);
-      }
-      return;
-    }
-
-    // Confirming choice
-    if (phase === Phase.EXAMINING) {
-      if (confirmIndex === 0) {
-        // Yes
-        giveStarter();
-        setPhase(Phase.RECEIVED);
-      } else {
-        // No - go back
-        setSelectedStarter(null);
-        setPhase(Phase.IDLE);
-      }
-      return;
-    }
-
-    // Flow through rival dialogue
-    if (phase === Phase.RECEIVED) { setPhase(Phase.RIVAL_JEALOUS); return; }
-    if (phase === Phase.RIVAL_JEALOUS) { setPhase(Phase.OAK_PATIENCE); return; }
-    if (phase === Phase.OAK_PATIENCE) { setPhase(Phase.RIVAL_PICKS); return; }
-    if (phase === Phase.RIVAL_PICKS) { setPhase(Phase.RIVAL_CHALLENGE_1); return; }
-    if (phase === Phase.RIVAL_CHALLENGE_1) { setPhase(Phase.RIVAL_CHALLENGE_2); return; }
-    if (phase === Phase.RIVAL_CHALLENGE_2) {
-      startRivalBattle();
-      setPhase(Phase.BATTLE);
-      return;
+        setPhase(Phase.CONFIRM);
+        break;
+      case Phase.CONFIRM:
+        if (confirmIndex === 0) {
+          // Yes
+          const starter = STARTERS[starterIndex];
+          setSelectedStarter(starter);
+          giveStarter(starter);
+          setPhase(Phase.RECEIVED);
+        } else {
+          // No
+          setPhase(Phase.PICK_STARTER);
+        }
+        break;
+      case Phase.RECEIVED:
+        setPhase(Phase.RIVAL_JEALOUS);
+        break;
+      case Phase.RIVAL_JEALOUS:
+        setPhase(Phase.OAK_PATIENCE);
+        break;
+      case Phase.OAK_PATIENCE:
+        setPhase(Phase.RIVAL_PICKS);
+        break;
+      case Phase.RIVAL_PICKS:
+        setPhase(Phase.RIVAL_CHALLENGE_1);
+        break;
+      case Phase.RIVAL_CHALLENGE_1:
+        setPhase(Phase.RIVAL_CHALLENGE_2);
+        break;
+      case Phase.RIVAL_CHALLENGE_2:
+        startRivalBattle();
+        break;
     }
   });
 
   useEvent(Event.B, () => {
     if (!isActive) return;
-    if (phase === Phase.EXAMINING) {
-      setSelectedStarter(null);
-      setPhase(Phase.IDLE);
+    if (phase === Phase.PICK_STARTER) {
+      setPhase(Phase.OAK_CHOOSE);
+    }
+    if (phase === Phase.CONFIRM) {
+      setPhase(Phase.PICK_STARTER);
     }
   });
 
   useEvent(Event.Left, () => {
     if (!isActive) return;
-    if (phase === Phase.EXAMINING) {
-      setConfirmIndex(1);
+    if (phase === Phase.PICK_STARTER) {
+      setStarterIndex(Math.max(0, starterIndex - 1));
+    }
+    if (phase === Phase.CONFIRM) {
+      setConfirmIndex(0);
     }
   });
 
   useEvent(Event.Right, () => {
     if (!isActive) return;
-    if (phase === Phase.EXAMINING) {
-      setConfirmIndex(0);
+    if (phase === Phase.PICK_STARTER) {
+      setStarterIndex(Math.min(2, starterIndex + 1));
+    }
+    if (phase === Phase.CONFIRM) {
+      setConfirmIndex(1);
     }
   });
 
   if (!isActive) return null;
 
-  // --- Oak intro dialogue ---
-  if (phase === Phase.OAK_INTRO || phase === Phase.OAK_CHOOSE) {
+  // =========================================================================
+  // RENDER: Pick starter (3 cards)
+  // =========================================================================
+  if (phase === Phase.PICK_STARTER) {
     return (
-      <DialogueBox>
-        <Frame wide tall flashing>
-          {getText()}
-        </Frame>
-      </DialogueBox>
+      <Overlay>
+        <TopArea style={{ justifyContent: "flex-start", paddingTop: "3vh" }}>
+          <TextBox style={{ marginBottom: "2vh" }}>
+            OAK: Choose a POKeMON!
+          </TextBox>
+          <StarterContainer>
+            {STARTERS.map((starter, i) => {
+              const meta = getPokemonMetadata(starter.id);
+              return (
+                <StarterCard key={starter.id} $active={starterIndex === i}>
+                  <ArrowSlot>
+                    <Arrow menu show={starterIndex === i} />
+                  </ArrowSlot>
+                  <StarterImage src={meta.images.front} />
+                  <StarterName>{starter.name}</StarterName>
+                  <StarterType>{starter.type}</StarterType>
+                </StarterCard>
+              );
+            })}
+          </StarterContainer>
+        </TopArea>
+        <TextBox>
+          {(() => {
+            const s = STARTERS[starterIndex];
+            const meta = getPokemonMetadata(s.id);
+            const desc: Record<number, string> = {
+              1: "A strange seed was planted on its back at birth. The plant sprouts and grows with this POKeMON.",
+              4: "Obviously prefers hot places. When it rains, steam is said to spout from the tip of its tail.",
+              7: "After birth, its back swells and hardens into a shell. Powerfully sprays foam from its mouth.",
+            };
+            return desc[s.id] || meta.name;
+          })()}
+          <ContinueHint>v</ContinueHint>
+        </TextBox>
+      </Overlay>
     );
   }
 
-  // --- Examining a Pokeball (confirm overlay) ---
-  if (phase === Phase.EXAMINING && selectedStarter) {
-    const meta = getPokemonMetadata(selectedStarter.id);
+  // =========================================================================
+  // RENDER: Confirm choice
+  // =========================================================================
+  if (phase === Phase.CONFIRM) {
+    const starter = STARTERS[starterIndex];
+    const meta = getPokemonMetadata(starter.id);
     return (
-      <ConfirmOverlay>
+      <Overlay>
         <TopArea>
-          <StarterImage src={meta.images.front} />
-          <StarterName>{selectedStarter.name}</StarterName>
-          <StarterType>{selectedStarter.type} type</StarterType>
+          <StarterImage src={meta.images.front} style={{ height: "25vh" }} />
+          <StarterName style={{ fontSize: "4vh", marginTop: "1vh" }}>
+            {starter.name}
+          </StarterName>
         </TopArea>
-        <Frame wide>
-          <div style={{ fontFamily: "PokemonGB", fontSize: "3vh", color: "black", padding: "1vh" }}>
-            OAK: So! You want {selectedStarter.name}?
-          </div>
-        </Frame>
+        <TextBox>
+          OAK: So! You want {starter.name}?
+        </TextBox>
         <ConfirmButtons>
           <ConfirmBtn $active={confirmIndex === 0}>
             <Arrow menu show={confirmIndex === 0} />
@@ -384,23 +407,22 @@ const StarterSelect = () => {
             NO
           </ConfirmBtn>
         </ConfirmButtons>
-      </ConfirmOverlay>
+      </Overlay>
     );
   }
 
-  // --- Post-selection dialogue (received, rival, battle) ---
-  if (phase >= Phase.RECEIVED && phase <= Phase.RIVAL_CHALLENGE_2) {
-    return (
-      <DialogueBox>
-        <Frame wide tall flashing>
-          {getText()}
-        </Frame>
-      </DialogueBox>
-    );
-  }
-
-  // IDLE or BATTLE — don't render anything
-  return null;
+  // =========================================================================
+  // RENDER: All dialogue phases (full overlay so player can't walk away)
+  // =========================================================================
+  return (
+    <Overlay>
+      <TopArea />
+      <TextBox>
+        {getText()}
+        <ContinueHint>v</ContinueHint>
+      </TextBox>
+    </Overlay>
+  );
 };
 
 export default StarterSelect;
