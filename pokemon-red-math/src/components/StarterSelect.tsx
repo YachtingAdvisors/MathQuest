@@ -6,92 +6,92 @@ import { Event } from "../app/emitter";
 import {
   selectPokemon,
   selectMapId,
+  selectPos,
+  selectDirection,
   selectName,
   setStarterPokemon,
   encounterPokemon,
   encounterTrainer,
 } from "../state/gameSlice";
 import { selectGradeSelected } from "../state/mathSlice";
-// uiSlice not needed — StarterSelect manages its own UI
 import { getPokemonMetadata } from "../app/use-pokemon-metadata";
 import { getPokemonStats } from "../app/use-pokemon-stats";
 import { MapId } from "../maps/map-types";
 import { Direction } from "../state/state-types";
+import { directionModifier } from "../app/map-helper";
 import { rival } from "../app/npcs";
 import getPokemonEncounter from "../app/pokemon-encounter-helper";
-import PixelImage from "../styles/PixelImage";
 import Arrow from "./Arrow";
-// Frame not needed — using custom TextBox
 import { RootState } from "../state/store";
 
 // ---------------------------------------------------------------------------
-// In Pokemon Red, in Oak's Lab:
-// 1. Oak greets you and tells you to pick from 3 Pokeballs
-// 2. You choose one (full screen overlay with the 3 starters)
-// 3. Rival picks the type-advantaged counter
-// 4. Rival challenges you to a battle
+// Authentic Pokemon Blue lab flow:
+//
+// 1. Player enters lab → Oak dialogue at bottom of screen (lab visible)
+// 2. "There are 3 POKeMON here! Go choose!" → dialogue closes
+// 3. Player walks freely in the lab to the table (row 1, cols 3/4/5)
+// 4. Player faces up at row 2 and presses A on a Pokeball
+// 5. "BULBASAUR? A GRASS type. Do you want it?" → Yes/No
+// 6. After picking → rival reacts → rival picks → rival challenges
+// 7. Rival battle launches
 // ---------------------------------------------------------------------------
 
 interface Starter {
   id: number;
   name: string;
   type: string;
+  tableX: number; // Which column on the table (3=left, 4=center, 5=right)
   rivalCounterId: number;
 }
 
 const STARTERS: Starter[] = [
-  { id: 1, name: "BULBASAUR", type: "GRASS", rivalCounterId: 4 },
-  { id: 4, name: "CHARMANDER", type: "FIRE", rivalCounterId: 7 },
-  { id: 7, name: "SQUIRTLE", type: "WATER", rivalCounterId: 1 },
+  { id: 1, name: "BULBASAUR", type: "GRASS", tableX: 3, rivalCounterId: 4 },
+  { id: 4, name: "CHARMANDER", type: "FIRE", tableX: 4, rivalCounterId: 7 },
+  { id: 7, name: "SQUIRTLE", type: "WATER", tableX: 5, rivalCounterId: 1 },
 ];
 
 enum Phase {
-  OAK_GREETING,
-  OAK_CHOOSE,
-  PICK_STARTER,       // Full screen: pick from 3
-  CONFIRM,            // "You want CHARMANDER?" Yes/No
+  // Bottom-of-screen dialogue (lab visible behind)
+  OAK_GREETING,       // "Ah, RED! I've been waiting!"
+  OAK_EXPLAIN,        // "There are 3 POKeMON here!"
+  OAK_CHOOSE,         // "Go choose one!"
+
+  // Player walks freely — no UI shown
+  WALKING,
+
+  // Player pressed A on a Pokeball — bottom dialogue
+  POKEBALL_EXAMINE,   // "CHARMANDER, the FIRE type. Do you want it?"
+  CONFIRM,            // Yes / No menu
+
+  // Post-selection flow — bottom dialogue
   RECEIVED,           // "RED received CHARMANDER!"
-  RIVAL_JEALOUS,
-  OAK_PATIENCE,
-  RIVAL_PICKS,
-  RIVAL_CHALLENGE_1,
-  RIVAL_CHALLENGE_2,
+  RIVAL_JEALOUS,      // "RIVAL: Hey! I was here first!"
+  OAK_PATIENCE,       // "OAK: Be patient!"
+  RIVAL_PICKS,        // "RIVAL picked up SQUIRTLE!"
+  RIVAL_CHALLENGE_1,  // "My POKeMON looks stronger!"
+  RIVAL_CHALLENGE_2,  // "I'll take you on!"
+
   DONE,
 }
 
 // ---------------------------------------------------------------------------
-// Styles
+// Styles — bottom dialogue box (not full overlay)
 // ---------------------------------------------------------------------------
 
-const fadeIn = keyframes`
-  from { opacity: 0; }
-  to { opacity: 1; }
-`;
-
-const Overlay = styled.div`
+const DialogueContainer = styled.div`
   position: absolute;
-  top: 0; left: 0;
+  bottom: 0; left: 0;
+  width: 100%;
+  height: 20%;
+  z-index: 150;
+
+  @media (max-width: 1000px) {
+    height: 30%;
+  }
+`;
+
+const DialogueBox = styled.div`
   width: 100%; height: 100%;
-  z-index: 300;
-  background: var(--bg);
-  display: flex;
-  flex-direction: column;
-  animation: ${fadeIn} 300ms ease-out;
-`;
-
-const TopArea = styled.div`
-  flex: 1;
-  display: flex;
-  flex-direction: column;
-  align-items: center;
-  justify-content: center;
-  padding: 2vh;
-  @media (max-width: 1000px) { padding: 5px; }
-`;
-
-const TextBox = styled.div`
-  width: 90%;
-  min-height: 18%;
   background: var(--bg);
   border: 4px solid black;
   padding: 2vh;
@@ -100,8 +100,12 @@ const TextBox = styled.div`
   color: black;
   line-height: 1.8;
   position: relative;
+  display: flex;
+  align-items: center;
+
   @media (max-width: 1000px) {
-    font-size: 8px; padding: 5px; border: 2px solid black; line-height: 1.6;
+    font-size: 8px; padding: 5px;
+    border: 2px solid black; line-height: 1.6;
   }
 `;
 
@@ -110,62 +114,51 @@ const bounce = keyframes`
   50% { transform: translateY(3px); }
 `;
 
-const ContinueHint = styled.div`
+const ContinueArrow = styled.div`
   position: absolute;
-  bottom: 4px; right: 8px;
+  bottom: 6px; right: 10px;
   font-size: 2.5vh; color: black;
   animation: ${bounce} 0.8s infinite;
-  @media (max-width: 1000px) { font-size: 7px; }
+  @media (max-width: 1000px) { font-size: 7px; bottom: 3px; right: 5px; }
 `;
 
-const StarterContainer = styled.div`
-  display: flex; justify-content: center; gap: 3vh;
-  width: 100%; padding: 0 2vh;
-  @media (max-width: 1000px) { gap: 8px; padding: 0 4px; }
+// Yes/No menu
+const ConfirmMenu = styled.div`
+  position: absolute;
+  right: 0; bottom: 100%;
+  background: var(--bg);
+  border: 4px solid black;
+  z-index: 160;
+  display: flex;
+  flex-direction: column;
+  min-width: 120px;
+
+  @media (max-width: 1000px) {
+    border: 2px solid black;
+    min-width: 55px;
+  }
 `;
 
-const StarterCard = styled.div<{ $active: boolean }>`
-  display: flex; flex-direction: column; align-items: center;
-  padding: 1.5vh;
-  border: 3px solid ${(p) => (p.$active ? "black" : "transparent")};
+const ConfirmOption = styled.div<{ $active: boolean }>`
+  font-family: "PokemonGB";
+  font-size: 3vh;
+  color: black;
+  padding: 1vh 2vh;
+  display: flex;
+  align-items: center;
+  gap: 1vh;
   background: ${(p) => (p.$active ? "rgba(0,0,0,0.08)" : "transparent")};
-  flex: 1; max-width: 33%; cursor: pointer;
-  @media (max-width: 1000px) { padding: 3px; border-width: 2px; }
-`;
 
-const StarterImage = styled(PixelImage)`
-  height: 15vh; margin-bottom: 0.5vh;
-  @media (max-width: 1000px) { height: 35px; margin-bottom: 2px; }
-`;
-
-const StarterName = styled.div`
-  font-family: "PokemonGB"; font-size: 2.5vh; color: black; text-align: center;
-  @media (max-width: 1000px) { font-size: 7px; }
-`;
-
-const StarterType = styled.div`
-  font-family: "PokemonGB"; font-size: 2vh; color: #555; text-align: center;
-  @media (max-width: 1000px) { font-size: 5px; }
+  @media (max-width: 1000px) {
+    font-size: 8px;
+    padding: 3px 6px;
+    gap: 3px;
+  }
 `;
 
 const ArrowSlot = styled.div`
-  height: 2vh; margin-bottom: 0.5vh;
-  @media (max-width: 1000px) { height: 8px; margin-bottom: 1px; }
-`;
-
-const ConfirmButtons = styled.div`
-  display: flex; justify-content: center; gap: 4vh; padding: 2vh;
-  @media (max-width: 1000px) { gap: 10px; padding: 5px; }
-`;
-
-const ConfirmBtn = styled.button<{ $active: boolean }>`
-  font-family: "PokemonGB"; font-size: 3vh; color: black;
-  background: ${(p) => (p.$active ? "rgba(0,0,0,0.1)" : "transparent")};
-  border: 3px solid ${(p) => (p.$active ? "black" : "#999")};
-  padding: 1vh 3vh; display: flex; align-items: center; gap: 1vh;
-  @media (max-width: 1000px) {
-    font-size: 8px; padding: 4px 8px; border-width: 2px; gap: 3px;
-  }
+  width: 3vh; min-width: 12px;
+  @media (max-width: 1000px) { width: 10px; }
 `;
 
 // ---------------------------------------------------------------------------
@@ -176,46 +169,31 @@ const StarterSelect = () => {
   const dispatch = useDispatch();
   const pokemon = useSelector(selectPokemon);
   const mapId = useSelector(selectMapId);
+  const pos = useSelector(selectPos);
+  const facing = useSelector(selectDirection);
   const gradeSelected = useSelector(selectGradeSelected);
   const playerName = useSelector(selectName) || "PLAYER";
-  const rivalNameStr = useSelector((state: RootState) => (state.game as any).rivalName) || "RIVAL";
+  const rivalNameStr =
+    useSelector((state: RootState) => (state.game as any).rivalName) || "RIVAL";
 
   const [phase, setPhase] = useState(Phase.OAK_GREETING);
-  const [starterIndex, setStarterIndex] = useState(1); // Default Charmander
-  const [confirmIndex, setConfirmIndex] = useState(0);
-  const [selectedStarter, setSelectedStarter] = useState<Starter | null>(null);
+  const [examinedStarter, setExaminedStarter] = useState<Starter | null>(null);
+  const [confirmIndex, setConfirmIndex] = useState(0); // 0=Yes, 1=No
 
-  // Active when: in the lab, no pokemon, grade selected
   const isActive =
     mapId === MapId.PalletTownLab &&
     pokemon.length === 0 &&
     gradeSelected &&
     phase !== Phase.DONE;
 
-  const getText = (): string => {
-    switch (phase) {
-      case Phase.OAK_GREETING:
-        return `OAK: Ah, ${playerName}! I've been waiting for you!`;
-      case Phase.OAK_CHOOSE:
-        return "OAK: There are 3 POKeMON here! They're inside the POKe BALLS on that table. When I was young, I was a serious POKeMON trainer! In my old age, I have only 3 left, but you can have one! Go on, choose!";
-      case Phase.RECEIVED:
-        return `${playerName} received ${selectedStarter?.name || "POKeMON"}!`;
-      case Phase.RIVAL_JEALOUS:
-        return `${rivalNameStr}: Hey! I was here first! Gramps, what about me?`;
-      case Phase.OAK_PATIENCE:
-        return `OAK: Be patient, ${rivalNameStr}! You can have one too!`;
-      case Phase.RIVAL_PICKS: {
-        if (!selectedStarter) return "";
-        const rivalMeta = getPokemonMetadata(selectedStarter.rivalCounterId);
-        return `${rivalNameStr} picked up ${rivalMeta.name.toUpperCase()}!`;
-      }
-      case Phase.RIVAL_CHALLENGE_1:
-        return `${rivalNameStr}: My POKeMON looks a lot stronger than yours!`;
-      case Phase.RIVAL_CHALLENGE_2:
-        return `${rivalNameStr}: I'll take you on right here and now!`;
-      default:
-        return "";
-    }
+  // Check which Pokeball the player is facing (if any)
+  const getFacingPokeball = (): Starter | null => {
+    if (facing !== Direction.Up) return null;
+    const mod = directionModifier(facing);
+    const targetX = pos.x + mod.x;
+    const targetY = pos.y + mod.y;
+    if (targetY !== 1) return null;
+    return STARTERS.find((s) => s.tableX === targetX) || null;
   };
 
   const giveStarter = (starter: Starter) => {
@@ -236,14 +214,15 @@ const StarterSelect = () => {
   };
 
   const startRivalBattle = () => {
-    if (!selectedStarter) return;
-    const rivalPokemonId = selectedStarter.rivalCounterId;
+    if (!examinedStarter) return;
     dispatch(
       encounterTrainer({
         npc: rival,
-        pokemon: [{ id: rivalPokemonId, level: 5 }],
+        pokemon: [{ id: examinedStarter.rivalCounterId, level: 5 }],
         facing: Direction.Left,
-        intro: [`${rivalNameStr}: Let's see how good you really are!`],
+        intro: [
+          `${rivalNameStr}: Let's see how good you really are!`,
+        ],
         outtro: [
           `${rivalNameStr}: What? Unbelievable!`,
           `I picked the wrong POKeMON!`,
@@ -252,7 +231,11 @@ const StarterSelect = () => {
         pos: { x: 6, y: 3 },
       })
     );
-    dispatch(encounterPokemon(getPokemonEncounter(rivalPokemonId, 5)));
+    dispatch(
+      encounterPokemon(
+        getPokemonEncounter(examinedStarter.rivalCounterId, 5)
+      )
+    );
     setPhase(Phase.DONE);
   };
 
@@ -262,28 +245,42 @@ const StarterSelect = () => {
 
     switch (phase) {
       case Phase.OAK_GREETING:
+        setPhase(Phase.OAK_EXPLAIN);
+        break;
+      case Phase.OAK_EXPLAIN:
         setPhase(Phase.OAK_CHOOSE);
         break;
       case Phase.OAK_CHOOSE:
-        setPhase(Phase.PICK_STARTER);
+        setPhase(Phase.WALKING);
         break;
-      case Phase.PICK_STARTER:
-        setSelectedStarter(STARTERS[starterIndex]);
-        setConfirmIndex(0);
-        setPhase(Phase.CONFIRM);
-        break;
-      case Phase.CONFIRM:
-        if (confirmIndex === 0) {
-          // Yes
-          const starter = STARTERS[starterIndex];
-          setSelectedStarter(starter);
-          giveStarter(starter);
-          setPhase(Phase.RECEIVED);
-        } else {
-          // No
-          setPhase(Phase.PICK_STARTER);
+
+      case Phase.WALKING: {
+        // Player presses A — check if facing a Pokeball
+        const pokeball = getFacingPokeball();
+        if (pokeball) {
+          setExaminedStarter(pokeball);
+          setConfirmIndex(0);
+          setPhase(Phase.POKEBALL_EXAMINE);
         }
         break;
+      }
+
+      case Phase.POKEBALL_EXAMINE:
+        setPhase(Phase.CONFIRM);
+        break;
+
+      case Phase.CONFIRM:
+        if (confirmIndex === 0) {
+          // Yes — give the starter
+          if (examinedStarter) giveStarter(examinedStarter);
+          setPhase(Phase.RECEIVED);
+        } else {
+          // No — go back to walking
+          setExaminedStarter(null);
+          setPhase(Phase.WALKING);
+        }
+        break;
+
       case Phase.RECEIVED:
         setPhase(Phase.RIVAL_JEALOUS);
         break;
@@ -307,121 +304,86 @@ const StarterSelect = () => {
 
   useEvent(Event.B, () => {
     if (!isActive) return;
-    if (phase === Phase.PICK_STARTER) {
-      setPhase(Phase.OAK_CHOOSE);
-    }
-    if (phase === Phase.CONFIRM) {
-      setPhase(Phase.PICK_STARTER);
+    if (phase === Phase.POKEBALL_EXAMINE || phase === Phase.CONFIRM) {
+      setExaminedStarter(null);
+      setPhase(Phase.WALKING);
     }
   });
 
-  useEvent(Event.Left, () => {
+  useEvent(Event.Up, () => {
     if (!isActive) return;
-    if (phase === Phase.PICK_STARTER) {
-      setStarterIndex(Math.max(0, starterIndex - 1));
-    }
-    if (phase === Phase.CONFIRM) {
-      setConfirmIndex(0);
-    }
+    if (phase === Phase.CONFIRM) setConfirmIndex(0);
   });
 
-  useEvent(Event.Right, () => {
+  useEvent(Event.Down, () => {
     if (!isActive) return;
-    if (phase === Phase.PICK_STARTER) {
-      setStarterIndex(Math.min(2, starterIndex + 1));
-    }
-    if (phase === Phase.CONFIRM) {
-      setConfirmIndex(1);
-    }
+    if (phase === Phase.CONFIRM) setConfirmIndex(1);
   });
 
   if (!isActive) return null;
 
-  // =========================================================================
-  // RENDER: Pick starter (3 cards)
-  // =========================================================================
-  if (phase === Phase.PICK_STARTER) {
-    return (
-      <Overlay>
-        <TopArea style={{ justifyContent: "flex-start", paddingTop: "3vh" }}>
-          <TextBox style={{ marginBottom: "2vh" }}>
-            OAK: Choose a POKeMON!
-          </TextBox>
-          <StarterContainer>
-            {STARTERS.map((starter, i) => {
-              const meta = getPokemonMetadata(starter.id);
-              return (
-                <StarterCard key={starter.id} $active={starterIndex === i}>
-                  <ArrowSlot>
-                    <Arrow menu show={starterIndex === i} />
-                  </ArrowSlot>
-                  <StarterImage src={meta.images.front} />
-                  <StarterName>{starter.name}</StarterName>
-                  <StarterType>{starter.type}</StarterType>
-                </StarterCard>
-              );
-            })}
-          </StarterContainer>
-        </TopArea>
-        <TextBox>
-          {(() => {
-            const s = STARTERS[starterIndex];
-            const meta = getPokemonMetadata(s.id);
-            const desc: Record<number, string> = {
-              1: "A strange seed was planted on its back at birth. The plant sprouts and grows with this POKeMON.",
-              4: "Obviously prefers hot places. When it rains, steam is said to spout from the tip of its tail.",
-              7: "After birth, its back swells and hardens into a shell. Powerfully sprays foam from its mouth.",
-            };
-            return desc[s.id] || meta.name;
-          })()}
-          <ContinueHint>v</ContinueHint>
-        </TextBox>
-      </Overlay>
-    );
-  }
+  // WALKING phase — no UI, player moves freely
+  if (phase === Phase.WALKING) return null;
 
-  // =========================================================================
-  // RENDER: Confirm choice
-  // =========================================================================
-  if (phase === Phase.CONFIRM) {
-    const starter = STARTERS[starterIndex];
-    const meta = getPokemonMetadata(starter.id);
-    return (
-      <Overlay>
-        <TopArea>
-          <StarterImage src={meta.images.front} style={{ height: "25vh" }} />
-          <StarterName style={{ fontSize: "4vh", marginTop: "1vh" }}>
-            {starter.name}
-          </StarterName>
-        </TopArea>
-        <TextBox>
-          OAK: So! You want {starter.name}?
-        </TextBox>
-        <ConfirmButtons>
-          <ConfirmBtn $active={confirmIndex === 0}>
-            <Arrow menu show={confirmIndex === 0} />
-            YES
-          </ConfirmBtn>
-          <ConfirmBtn $active={confirmIndex === 1}>
-            <Arrow menu show={confirmIndex === 1} />
-            NO
-          </ConfirmBtn>
-        </ConfirmButtons>
-      </Overlay>
-    );
-  }
+  // --- Dialogue text ---
+  const getText = (): string => {
+    switch (phase) {
+      case Phase.OAK_GREETING:
+        return `OAK: Ah, ${playerName}! I've been waiting for you!`;
+      case Phase.OAK_EXPLAIN:
+        return "OAK: There are 3 POKeMON here! They are inside the POKe BALLS on that table!";
+      case Phase.OAK_CHOOSE:
+        return "OAK: When I was young, I was a serious POKeMON trainer! In my old age, I have only 3 left. You can have one! Go ahead and choose!";
+      case Phase.POKEBALL_EXAMINE:
+        return examinedStarter
+          ? `${examinedStarter.name}, the ${examinedStarter.type}-type POKeMON. Do you want it?`
+          : "";
+      case Phase.RECEIVED:
+        return `${playerName} received ${examinedStarter?.name || "POKeMON"}!`;
+      case Phase.RIVAL_JEALOUS:
+        return `${rivalNameStr}: Hey! I was here first! Gramps, what about me?`;
+      case Phase.OAK_PATIENCE:
+        return `OAK: Be patient, ${rivalNameStr}! You can have one too!`;
+      case Phase.RIVAL_PICKS: {
+        if (!examinedStarter) return "";
+        const meta = getPokemonMetadata(examinedStarter.rivalCounterId);
+        return `${rivalNameStr} picked up ${meta.name.toUpperCase()}!`;
+      }
+      case Phase.RIVAL_CHALLENGE_1:
+        return `${rivalNameStr}: My POKeMON looks a lot stronger than yours!`;
+      case Phase.RIVAL_CHALLENGE_2:
+        return `${rivalNameStr}: I'll take you on right here and now!`;
+      default:
+        return "";
+    }
+  };
 
-  // =========================================================================
-  // RENDER: All dialogue phases (full overlay so player can't walk away)
-  // =========================================================================
+  // --- Render: bottom dialogue box (lab visible behind) ---
   return (
-    <Overlay>
-      <TopArea />
-      <TextBox>
+    <DialogueContainer>
+      <DialogueBox>
         {getText()}
-        <ContinueHint>v</ContinueHint>
-      </TextBox>
-    </Overlay>
+        {phase !== Phase.CONFIRM && <ContinueArrow>v</ContinueArrow>}
+      </DialogueBox>
+
+      {/* Yes/No menu for confirm phase */}
+      {phase === Phase.CONFIRM && (
+        <ConfirmMenu>
+          <ConfirmOption $active={confirmIndex === 0}>
+            <ArrowSlot>
+              <Arrow menu show={confirmIndex === 0} />
+            </ArrowSlot>
+            YES
+          </ConfirmOption>
+          <ConfirmOption $active={confirmIndex === 1}>
+            <ArrowSlot>
+              <Arrow menu show={confirmIndex === 1} />
+            </ArrowSlot>
+            NO
+          </ConfirmOption>
+        </ConfirmMenu>
+      )}
+    </DialogueContainer>
   );
 };
 
