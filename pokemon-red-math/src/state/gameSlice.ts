@@ -38,7 +38,12 @@ const initialState: GameState = {
   pc: [],
   activePokemonIndex: 0,
   trainerEncounter: undefined,
-  defeatedTrainers: [],
+  defeatedTrainers: [
+    // Pre-defeat Oak and rival in the lab so they show as NPCs
+    // but don't trigger trainer battles (StarterSelect handles that)
+    "pallet-town-lab-4-2",  // Oak
+    "pallet-town-lab-6-3",  // Rival
+  ],
   collectedItems: [],
   completedQuests: [],
   mathGrade: -1,
