@@ -12,6 +12,7 @@ import { useEffect, useRef, useState } from "react";
 import { selectFrozen, selectSpinning } from "../state/uiSlice";
 import { MOVE_SPEED } from "../app/constants";
 import { Direction } from "../state/state-types";
+import { selectGameSpeed } from "../state/settingsSlice";
 
 const MovementHandler = () => {
   const dispatch = useDispatch();
@@ -23,6 +24,10 @@ const MovementHandler = () => {
   const [cooldown, setCooldown] = useState(false);
   const spinning = useSelector(selectSpinning);
   const frozen = useSelector(selectFrozen);
+  const gameSpeed = useSelector(selectGameSpeed);
+
+  // Speed-adjusted move speed: faster at higher speeds
+  const adjustedMoveSpeed = Math.max(30, Math.round(MOVE_SPEED / gameSpeed));
 
   const pressingButton =
     pressingLeft || pressingRight || pressingUp || pressingDown;
@@ -57,62 +62,40 @@ const MovementHandler = () => {
       }
     };
 
-    // If moving, move the character immediately
     if ((pressingButton || spinning) && !cooldown && !frozen) {
       move(direction);
       setCooldown(true);
 
-      // Clear any existing interval
       if (tickIntervalRef.current) {
         clearInterval(tickIntervalRef.current);
       }
 
-      // Set up a new interval
       tickIntervalRef.current = setInterval(() => {
         move(direction);
-      }, MOVE_SPEED);
+      }, adjustedMoveSpeed);
 
-      setTimeout(() => setCooldown(false), MOVE_SPEED);
+      setTimeout(() => setCooldown(false), adjustedMoveSpeed);
     } else if (!pressingButton && tickIntervalRef.current) {
-      // Clear the interval if the user stopped moving
       clearInterval(tickIntervalRef.current);
       tickIntervalRef.current = null;
     }
 
     return () => {
-      // Clear interval when component unmounts
       if (tickIntervalRef.current) {
         clearInterval(tickIntervalRef.current);
       }
     };
     // eslint-disable-next-line react-hooks/exhaustive-deps
-  }, [pressingButton, direction, dispatch, cooldown, frozen]);
+  }, [pressingButton, direction, dispatch, cooldown, frozen, adjustedMoveSpeed]);
 
-  useEvent(Event.StartDown, () => {
-    setPressingDown(true);
-  });
-  useEvent(Event.StartUp, () => {
-    setPressingUp(true);
-  });
-  useEvent(Event.StartLeft, () => {
-    setPressingLeft(true);
-  });
-  useEvent(Event.StartRight, () => {
-    setPressingRight(true);
-  });
-
-  useEvent(Event.StopDown, () => {
-    setPressingDown(false);
-  });
-  useEvent(Event.StopUp, () => {
-    setPressingUp(false);
-  });
-  useEvent(Event.StopLeft, () => {
-    setPressingLeft(false);
-  });
-  useEvent(Event.StopRight, () => {
-    setPressingRight(false);
-  });
+  useEvent(Event.StartDown, () => setPressingDown(true));
+  useEvent(Event.StartUp, () => setPressingUp(true));
+  useEvent(Event.StartLeft, () => setPressingLeft(true));
+  useEvent(Event.StartRight, () => setPressingRight(true));
+  useEvent(Event.StopDown, () => setPressingDown(false));
+  useEvent(Event.StopUp, () => setPressingUp(false));
+  useEvent(Event.StopLeft, () => setPressingLeft(false));
+  useEvent(Event.StopRight, () => setPressingRight(false));
   useEvent(Event.StopMoving, () => {
     setPressingLeft(false);
     setPressingRight(false);

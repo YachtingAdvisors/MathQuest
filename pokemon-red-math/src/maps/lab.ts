@@ -23,7 +23,10 @@ const lab: MapType = {
   },
   text: {
     1: {
-      0: ["ASH turned on the PC.", "It's not working..."],
+      0: ["Turned on the PC.", "It's not working..."],
+      3: ["A POKe BALL is sitting on the table."],
+      4: ["A POKe BALL is sitting on the table."],
+      5: ["A POKe BALL is sitting on the table."],
     },
   },
   maps: {},

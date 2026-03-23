@@ -36,13 +36,21 @@ import Evolution from "./Evolution";
 import SpeedControl from "./SpeedControl";
 import IntroSequence from "./IntroSequence";
 import RareCounter from "./RareCounter";
+import StarterSelect from "./StarterSelect";
 import MathPokedex from "./MathPokedex";
 import ParentDashboard from "./ParentDashboard";
 import DailyChallenge from "./DailyChallenge";
 import MathLab from "./MathLab";
 import MathBadges from "./MathBadges";
-import { useSelector as useSelectorTyped } from "react-redux";
+import { useSelector as useSelectorTyped, useDispatch as useDispatchTyped } from "react-redux";
 import { RootState } from "../state/store";
+import {
+  hideMathPokedex,
+  hideParentDashboard,
+  hideDailyChallenge,
+  hideMathLab,
+  hideMathBadges,
+} from "../state/mathSlice";
 
 const Container = styled.div`
   position: absolute;
@@ -62,12 +70,12 @@ const StyledGame = styled.div`
   );
 `;
 
-const BackgroundContainer = styled.div`
+const BackgroundContainer = styled.div<{ $speed?: number }>`
   position: absolute;
   top: 0;
   left: 0;
 
-  transition: transform 0.2s steps(5, end);
+  transition: transform ${(p) => Math.max(0.03, 0.2 / (p.$speed || 1))}s steps(5, end);
 `;
 
 interface BackgroundProps {
@@ -95,17 +103,20 @@ const ColorOverlay = styled.div`
 `;
 
 const Game = () => {
+  const dispatch = useDispatchTyped();
   const pos = useSelector(selectPos);
   const map = useSelector(selectMap);
   const mathState = useSelectorTyped((state: RootState) => state.math);
   const gradeSelected = mathState?.gradeSelected;
   const grade = mathState?.grade ?? 3;
   const masteryData = mathState?.engineState?.masteryByType ?? {};
+  const gameSpeed = useSelectorTyped((state: RootState) => (state as any).settings?.gameSpeed ?? 1);
 
   return (
     <Container>
       <StyledGame>
         <BackgroundContainer
+          $speed={gameSpeed}
           style={{
             transform: `translate(${xToPx(-pos.x)}, ${yToPx(-pos.y)})`,
           }}
@@ -141,29 +152,30 @@ const Game = () => {
       <ConfirmationMenu />
       <MathPokedex
         show={!!mathState?.showMathPokedex}
-        close={() => {}}
+        close={() => dispatch(hideMathPokedex())}
         masteryData={masteryData}
       />
       <ParentDashboard
         show={!!mathState?.showParentDashboard}
-        close={() => {}}
+        close={() => dispatch(hideParentDashboard())}
         engineState={mathState?.engineState}
       />
       <DailyChallenge
         show={!!mathState?.showDailyChallenge}
-        close={() => {}}
+        close={() => dispatch(hideDailyChallenge())}
         grade={grade}
       />
       <MathLab
         show={!!mathState?.showMathLab}
-        close={() => {}}
+        close={() => dispatch(hideMathLab())}
         grade={grade}
       />
       <MathBadges
         show={!!mathState?.showMathBadges}
-        close={() => {}}
+        close={() => dispatch(hideMathBadges())}
         masteryData={masteryData}
       />
+      <StarterSelect />
       <RareCounter />
       {gradeSelected && <SpeedControl />}
       <IntroSequence />
