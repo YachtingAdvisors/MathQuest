@@ -244,9 +244,10 @@ const inFromRight = keyframes`
 `;
 
 const LeftImage = styled(PixelImage)`
-  height: 100%;
-  transform: translate(400%);
+  height: 140%;
+  transform: translate(400%) scale(1);
   animation: ${inFromRight} ${`${MOVEMENT_ANIMATION}ms`} linear forwards;
+  image-rendering: pixelated;
 `;
 
 const inFromLeft = keyframes`
@@ -255,9 +256,10 @@ const inFromLeft = keyframes`
 `;
 
 const RightImage = styled(PixelImage)`
-  height: 100%;
-  transform: translate(-400%);
+  height: 140%;
+  transform: translate(-400%) scale(1);
   animation: ${inFromLeft} ${`${MOVEMENT_ANIMATION}ms`} linear forwards;
+  image-rendering: pixelated;
 `;
 
 const attackRight = keyframes`
