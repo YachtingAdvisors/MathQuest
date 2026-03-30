@@ -57,14 +57,14 @@ const lab: MapType = {
     {
       npc: rival,
       pokemon: [{ id: 4, level: 5 }],
-      facing: Direction.Down,
+      facing: Direction.Up,
       intro: ["Heh, I'm going to get the best one!"],
       outtro: [
         "I'm waiting for you to pick first!",
         "Hurry up already!",
       ],
       money: 0,
-      pos: { x: 6, y: 3 },
+      pos: { x: 8, y: 5 },
     },
   ],
 };
