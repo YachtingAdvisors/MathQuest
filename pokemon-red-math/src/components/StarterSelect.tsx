@@ -381,22 +381,13 @@ const StarterSelect = () => {
     }
   };
 
-  // Determine which pokeballs to show — hide the one the player picked
-  const chosenX = phase >= Phase.RECEIVED && examinedStarter ? examinedStarter.tableX : -1;
   const showDialogue = phase !== Phase.WALKING;
 
-  // --- Render: Pokeballs on table + optional dialogue ---
+  // --- Render: dialogue only (pokeballs rendered by LabPokeballs) ---
+  if (!showDialogue) return null;
+
   return (
     <>
-      {/* Visual Pokeballs on the table */}
-      {STARTERS.map((s) =>
-        s.tableX !== chosenX ? (
-          <TablePokeball key={s.tableX} $x={s.tableX} $y={3}>
-            <PokeballSprite src={pokeballImg} />
-          </TablePokeball>
-        ) : null
-      )}
-
       {/* Bottom dialogue box */}
       {showDialogue && (
         <DialogueContainer>
@@ -424,6 +415,31 @@ const StarterSelect = () => {
           )}
         </DialogueContainer>
       )}
+    </>
+  );
+};
+
+// Pokeballs rendered on the map (inside BackgroundContainer)
+export const LabPokeballs = () => {
+  const pokemon = useSelector(selectPokemon);
+  const mapId = useSelector(selectMapId);
+  const gradeSelected = useSelector(selectGradeSelected);
+
+  // Only show pokeballs before player has a starter, in the lab
+  if (
+    mapId !== MapId.PalletTownLab ||
+    pokemon.length > 0 ||
+    !gradeSelected
+  )
+    return null;
+
+  return (
+    <>
+      {STARTERS.map((s) => (
+        <TablePokeball key={s.tableX} $x={s.tableX} $y={3}>
+          <PokeballSprite src={pokeballImg} />
+        </TablePokeball>
+      ))}
     </>
   );
 };

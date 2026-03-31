@@ -249,10 +249,15 @@ const inFromLeft = keyframes`
 `;
 
 const RightImage = styled(PixelImage)`
-  height: 280%;
+  height: 500%;
+  min-height: 180px;
   transform: translate(-400%) scale(1);
   animation: ${inFromLeft} ${`${MOVEMENT_ANIMATION}ms`} linear forwards;
   image-rendering: pixelated;
+
+  @media (max-width: 1000px) {
+    min-height: 100px;
+  }
 `;
 
 const attackRight = keyframes`

@@ -36,7 +36,7 @@ import Evolution from "./Evolution";
 import SpeedControl from "./SpeedControl";
 import IntroSequence from "./IntroSequence";
 import RareCounter from "./RareCounter";
-import StarterSelect from "./StarterSelect";
+import StarterSelect, { LabPokeballs } from "./StarterSelect";
 import MathPokedex from "./MathPokedex";
 import ParentDashboard from "./ParentDashboard";
 import DailyChallenge from "./DailyChallenge";
@@ -130,6 +130,7 @@ const Game = () => {
             map.items.map((item: MapItemType, index: number) => (
               <Item key={index} item={item} />
             ))}
+          <LabPokeballs />
           <DebugOverlay />
         </BackgroundContainer>
         <Character />
