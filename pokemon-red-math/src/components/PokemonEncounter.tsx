@@ -183,8 +183,9 @@ const ImageContainer = styled.div<ImageContainerProps>`
   height: 100%;
   flex: 1;
   display: flex;
-  align-items: center;
+  align-items: flex-end;
   justify-content: center;
+  overflow: hidden;
 
   ${(props: ImageContainerProps) =>
     props.$flashing &&
@@ -237,10 +238,15 @@ const inFromRight = keyframes`
 `;
 
 const LeftImage = styled(PixelImage)`
-  height: 140%;
+  height: 350%;
+  min-height: 150px;
   transform: translate(400%) scale(1);
   animation: ${inFromRight} ${`${MOVEMENT_ANIMATION}ms`} linear forwards;
   image-rendering: pixelated;
+
+  @media (max-width: 1000px) {
+    min-height: 80px;
+  }
 `;
 
 const inFromLeft = keyframes`
