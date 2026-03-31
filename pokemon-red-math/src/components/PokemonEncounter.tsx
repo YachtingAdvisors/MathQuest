@@ -865,14 +865,16 @@ const PokemonEncounter = () => {
       const hasOtherPokemon = pokemon.some((p) => p.hp > 0);
       if (hasOtherPokemon) setStage(25);
       else setStage(26);
+      return;
     }
 
-    if (stage === 26) setStage(27);
+    if (stage === 26) { setStage(27); return; }
 
     if (stage === 27) {
       setStage(28);
       setTimeout(() => dispatch(recoverFromFainting()), 1000);
       setTimeout(() => endEncounter_(true), 1500);
+      return;
     }
 
     if (stage === 29) {
@@ -962,7 +964,7 @@ const PokemonEncounter = () => {
         getLevelData(processingPokemon.level, processingPokemon.xp).level
       }!`;
     }
-    if (stage === 24) return `${activeMetadata.name.toUpperCase()} fainted!`;
+    if (stage === 24) return `${activeMetadata?.name?.toUpperCase() ?? "POKeMON"} fainted!`;
     if (stage === 26) return `${name} is out of usable POKeMON!`;
     if (stage === 27) return `${name} blacked out!`;
     if (stage === 29) {
