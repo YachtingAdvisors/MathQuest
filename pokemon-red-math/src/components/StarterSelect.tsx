@@ -3,6 +3,9 @@ import { useDispatch, useSelector } from "react-redux";
 import { useState } from "react";
 import useEvent from "../app/use-event";
 import { Event } from "../app/emitter";
+import { xToPx, yToPx } from "../app/position-helper";
+import pokeballImg from "../assets/misc/pokeball.png";
+import PixelImage from "../styles/PixelImage";
 import {
   selectPokemon,
   selectMapId,
@@ -162,6 +165,25 @@ const ConfirmOption = styled.div<{ $active: boolean }>`
 const ArrowSlot = styled.div`
   width: 3vh; min-width: 12px;
   @media (max-width: 1000px) { width: 10px; }
+`;
+
+// Visual Pokeball on table
+interface PokeballPos {
+  $x: number;
+  $y: number;
+}
+
+const TablePokeball = styled.div<PokeballPos>`
+  position: absolute;
+  top: ${(p) => yToPx(p.$y)};
+  left: ${(p) => xToPx(p.$x)};
+  transform: translateY(-20%);
+  z-index: 5;
+  pointer-events: none;
+`;
+
+const PokeballSprite = styled(PixelImage)`
+  width: ${xToPx(1)};
 `;
 
 // ---------------------------------------------------------------------------
@@ -326,9 +348,6 @@ const StarterSelect = () => {
 
   if (!isActive) return null;
 
-  // WALKING phase — no UI, player moves freely
-  if (phase === Phase.WALKING) return null;
-
   // --- Dialogue text ---
   const getText = (): string => {
     switch (phase) {
@@ -362,32 +381,50 @@ const StarterSelect = () => {
     }
   };
 
-  // --- Render: bottom dialogue box (lab visible behind) ---
-  return (
-    <DialogueContainer>
-      <DialogueBox>
-        {getText()}
-        {phase !== Phase.CONFIRM && <ContinueArrow>v</ContinueArrow>}
-      </DialogueBox>
+  // Determine which pokeballs to show — hide the one the player picked
+  const chosenX = phase >= Phase.RECEIVED && examinedStarter ? examinedStarter.tableX : -1;
+  const showDialogue = phase !== Phase.WALKING;
 
-      {/* Yes/No menu for confirm phase */}
-      {phase === Phase.CONFIRM && (
-        <ConfirmMenu>
-          <ConfirmOption $active={confirmIndex === 0}>
-            <ArrowSlot>
-              <Arrow menu show={confirmIndex === 0} />
-            </ArrowSlot>
-            YES
-          </ConfirmOption>
-          <ConfirmOption $active={confirmIndex === 1}>
-            <ArrowSlot>
-              <Arrow menu show={confirmIndex === 1} />
-            </ArrowSlot>
-            NO
-          </ConfirmOption>
-        </ConfirmMenu>
+  // --- Render: Pokeballs on table + optional dialogue ---
+  return (
+    <>
+      {/* Visual Pokeballs on the table */}
+      {STARTERS.map((s) =>
+        s.tableX !== chosenX ? (
+          <TablePokeball key={s.tableX} $x={s.tableX} $y={3}>
+            <PokeballSprite src={pokeballImg} />
+          </TablePokeball>
+        ) : null
       )}
-    </DialogueContainer>
+
+      {/* Bottom dialogue box */}
+      {showDialogue && (
+        <DialogueContainer>
+          <DialogueBox>
+            {getText()}
+            {phase !== Phase.CONFIRM && <ContinueArrow>v</ContinueArrow>}
+          </DialogueBox>
+
+          {/* Yes/No menu for confirm phase */}
+          {phase === Phase.CONFIRM && (
+            <ConfirmMenu>
+              <ConfirmOption $active={confirmIndex === 0}>
+                <ArrowSlot>
+                  <Arrow menu show={confirmIndex === 0} />
+                </ArrowSlot>
+                YES
+              </ConfirmOption>
+              <ConfirmOption $active={confirmIndex === 1}>
+                <ArrowSlot>
+                  <Arrow menu show={confirmIndex === 1} />
+                </ArrowSlot>
+                NO
+              </ConfirmOption>
+            </ConfirmMenu>
+          )}
+        </DialogueContainer>
+      )}
+    </>
   );
 };
 

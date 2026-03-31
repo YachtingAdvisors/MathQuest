@@ -3,6 +3,7 @@ import { MapId, MapType } from "./map-types";
 import { Direction } from "../state/state-types";
 import { oak, rival } from "../app/npcs";
 
+
 import music from "../assets/music/maps/oaks-laboratory.mp3";
 
 const lab: MapType = {
@@ -37,6 +38,7 @@ const lab: MapType = {
   exitReturnMap: MapId.PalletTown,
   music,
   grass: {},
+  // Pokeballs are rendered by StarterSelect component directly
   // Oak and rival are visible in the lab as NPCs.
   // StarterSelect handles the actual starter picking dialogue.
   // These trainers are pre-marked as defeated in gameSlice initialState

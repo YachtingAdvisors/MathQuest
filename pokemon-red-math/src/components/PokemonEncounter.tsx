@@ -92,13 +92,6 @@ const StyledPokemonEncounter = styled.div`
   padding-top: 1.5vh;
   display: flex;
   flex-direction: column;
-  width: 100%;
-
-  height: 80%;
-  @media (max-width: 1000px) {
-    height: 70%;
-    padding-top: 3px;
-  }
 `;
 
 const Row = styled.div`
@@ -256,7 +249,7 @@ const inFromLeft = keyframes`
 `;
 
 const RightImage = styled(PixelImage)`
-  height: 140%;
+  height: 280%;
   transform: translate(-400%) scale(1);
   animation: ${inFromLeft} ${`${MOVEMENT_ANIMATION}ms`} linear forwards;
   image-rendering: pixelated;
@@ -322,15 +315,15 @@ const CornerRight = styled(PixelImage)`
 `;
 
 const TextContainer = styled.div`
-  position: absolute;
-  bottom: 0;
-  left: 0;
   width: 100%;
   height: 20%;
+  min-height: 20%;
+  flex-shrink: 0;
   z-index: 100;
 
   @media (max-width: 1000px) {
     height: 30%;
+    min-height: 30%;
   }
 `;
 
